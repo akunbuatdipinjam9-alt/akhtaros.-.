@@ -311,3 +311,6 @@ A: Boleh, selama mereka gak distribusi ke luar. Tapi kalo distribusi (jual/grati
 Q: "Aman gak sih pake GPL-3.0 buat proyek gede kaya gini?"
 A: AMAN BANGET! Justru ini proteksi terbaik buat kode lu. Linux kernel, Git, WordPress pake GPL juga.
 
+
+btw ini juga butuh instal tor browser terpisah yah guys copy di folder akhtaros\penyimpanan os\dll\files\apps\
+
