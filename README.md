@@ -68,6 +68,8 @@ Coba pake Command Prompt Run as Administrator
 
 Kalo gagal, gak masalah — OS bakal fallback ke PowerShell otomatis!
 
+link download vs code nya = https://visualstudio.microsoft.com/downloads/?q=build+tools
+
 🔨 STEP 4 — COMPILE POWER BRIDGE (G-Helper)
 Ini buat kontrol power plan Windows versi akurat (pake PowerSetActiveOverlayScheme).
 
