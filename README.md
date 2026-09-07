@@ -314,4 +314,42 @@ A: AMAN BANGET! Justru ini proteksi terbaik buat kode lu. Linux kernel, Git, Wor
 
 btw ini juga butuh instal tor browser terpisah yah guys copy di folder akhtaros\penyimpanan os\dll\files\apps\
 
-bagi kaum pemalas git clone dan instal lib gw kasih file installer nya
+ ## 🔥 DOWNLOAD (PRE-BUILT)
+
+**Gak mau ribet? Download langsung EXE-nya!**
+
+[⬇️ Download Akhtar OS v3.0 (2GB) - https://www.mediafire.com/file/s6vxd7zeudfyibw/Akhtar_OS_Setup_1.0.0.exe/file)
+
+### Cara Install:
+1. Download file
+2. Extract pake 7zip/WinRAR
+3. Double click `Akhtar OS.exe`
+4. Login pake password: `akhtar123`
+
+### Spesifikasi Minimal:
+- Windows 10/11 (64-bit)
+- RAM 4GB (recommended 8GB)
+- Storage 3GB free space
+
+---
+
+## 📦 ATAU KLONING REPO + BUILD DARI SOURCE
+
+Kalo lu mau build dari source, ikuti step di bawah ini...
+
+## ❓ FAQ
+
+**Q: "Ini virus?"**
+A: Bukan. Kode sumbernya terbuka di GitHub. Lu bisa cek sendiri.
+
+**Q: "2GB?! Kok gede?"**
+A: Karena include Chromium (Electron) + Tor Browser + semua library.
+
+**Q: "Bisa jalan di Mac/Linux?"**
+A: Saat ini cuma Windows. Tapi kode-nya udah siap buat di-port ke Mac/Linux.
+
+**Q: "Password login?"**
+A: `akhtar123`
+
+**Q: "Kenapa gak di GitHub Releases aja?"**
+A: File 2GB, GitHub Releases limit 2GB (kadang suka error). MediaFire lebih stabil.
