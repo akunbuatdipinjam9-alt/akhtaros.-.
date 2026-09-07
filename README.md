@@ -317,7 +317,7 @@ kredit yang sama di puncak file), tambahin case baru di `Program.cs`
 - G-Helper PowerBridge (GPL-3.0)
 
 
-pakai bahasa indo
+
 📄 Lisensi
 Proyek ini dilisensikan di bawah GNU General Public License v3.0.
 
