@@ -10,7 +10,7 @@ Python	python.org	Version 3.x, buat node-gyp
 🔧 STEP 1 — CLONE REPO
 bash
 # Clone repository lu
-git clone https://github.com/akhtar-arch/akhtar-os.git
+git cloneh ttps://github.com/akunbuatdipinjam9-alt/akhtaros.-.
 cd akhtar-os
 
 📦 STEP 2 — INSTALL DEPENDENCIES
