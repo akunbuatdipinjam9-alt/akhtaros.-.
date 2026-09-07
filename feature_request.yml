@@ -1,0 +1,28 @@
+name: ✨ Minta Fitur Baru
+description: Ada ide keren buat Akhtar OS?
+title: "[FEAT] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "## 🚀 Ada ide? Share dong!"
+  - type: textarea
+    id: problem
+    attributes:
+      label: Fitur ini buat ngatasin masalah apa?
+      placeholder: Misal: "Gw pengen bisa sync data antar device"
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solusi yang lu bayangin
+      placeholder: "Bikin Akhtar Cloud pake Firebase"
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Ada alternatif lain?
+      placeholder: "Atau pake Supabase"
+  - type: textarea
+    id: context
+    attributes:
+      label: Info tambahan
+      placeholder: "Ini bakal berguna buat..."
