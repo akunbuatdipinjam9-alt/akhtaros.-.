@@ -314,3 +314,4 @@ A: AMAN BANGET! Justru ini proteksi terbaik buat kode lu. Linux kernel, Git, Wor
 
 btw ini juga butuh instal tor browser terpisah yah guys copy di folder akhtaros\penyimpanan os\dll\files\apps\
 
+bagi kaum pemalas git clone dan instal lib gw kasih file installer nya
