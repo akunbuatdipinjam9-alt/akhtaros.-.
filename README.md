@@ -1,18 +1,26 @@
-🚀 AKHTAR OS — CARA INSTALL & JALANKAN (DARI SOURCE)
-BRO, GW AKAN KASIH TAU CARA NYALAIN OS KEREN INI DARI 0!
+# 🚀 AKHTAR OS — CARA INSTALL & JALANKAN (DARI SOURCE)
 
-📦 YANG LU PERLU SIAPIN DULU
-Tools	Link Download	Keterangan
-Node.js	nodejs.org	Pake versi LTS (18.x atau 20.x)
-Git	git-scm.com	Buat clone repo
-Visual Studio Build Tools	visualstudio.microsoft.com	PENTING! Buat compile native addon (C++)
-Python	python.org	Version 3.x, buat node-gyp
-🔧 STEP 1 — CLONE REPO
-bash
+**BRO, GW AKAN KASIH TAU CARA NYALAIN OS KEREN INI DARI 0!**
+
+---
+
+## 📦 YANG LU PERLU SIAPIN DULU
+
+| Tools | Link Download | Keterangan |
+|-------|---------------|------------|
+| **Node.js** | [nodejs.org](https://nodejs.org) | Pake versi LTS (18.x atau 20.x) |
+| **Git** | [git-scm.com](https://git-scm.com) | Buat clone repo |
+| **Visual Studio Build Tools** | [visualstudio.microsoft.com](https://visualstudio.microsoft.com/downloads/?q=build+tools) | **PENTING!** Buat compile native addon (C++) |
+| **Python** | [python.org](https://python.org) | Version 3.x, buat node-gyp |
+
+---
+
+## 🔧 STEP 1 — CLONE REPO
+
+```bash
 # Clone repository lu
-git cloneh ttps://github.com/akunbuatdipinjam9-alt/akhtaros.-.
+git clone https://github.com/akunbuatdipinjam9-alt/akhtaros.-
 cd akhtar-os
-
 📦 STEP 2 — INSTALL DEPENDENCIES
 bash
 # Install semua package yang dibutuhin
@@ -38,7 +46,6 @@ three.js — Slime 3D render
 qrious — QR generator
 
 🔥 KALAU ERROR NODE-GYP:
-
 bash
 # Windows — install build tools
 npm install --global windows-build-tools
@@ -61,14 +68,11 @@ node-gyp rebuild
 # Balik ke root folder
 cd ../../
 ⚠️ KALAU ERROR:
-
 Pastikan Visual Studio Build Tools udah ke-install
 
 Coba pake Command Prompt Run as Administrator
 
 Kalo gagal, gak masalah — OS bakal fallback ke PowerShell otomatis!
-
-link download vs code nya = https://visualstudio.microsoft.com/downloads/?q=build+tools
 
 🔨 STEP 4 — COMPILE POWER BRIDGE (G-Helper)
 Ini buat kontrol power plan Windows versi akurat (pake PowerSetActiveOverlayScheme).
@@ -86,7 +90,6 @@ powershell -Command "& { Add-Type -Path 'PowerNative.cs' -OutputType Library -Ou
 # Balik ke root
 cd ../../
 ⚠️ KALAU ERROR:
-
 Install .NET SDK 6.0+ dari dotnet.microsoft.com
 
 Kalo gagal, OS bakal fallback ke powercfg /setactive
@@ -110,7 +113,6 @@ npm start
 # Atau pake electron langsung
 npx electron .
 🔥 OS BAKAL NYALA!
-
 Boot animation muncul
 
 Login screen dengan password default: akhtar123
@@ -135,7 +137,8 @@ File	Keterangan
 Akhtar OS Setup.exe	Installer (user tinggal next-next)
 Akhtar OS-3.0.0-win.zip	Portable version (extract & jalanin)
 Akhtar OS-3.0.0-win.exe	Single executable (portable)
-🔥 UKURAN: ~2GB (Karena include Tor Browser + Chromium)
+🔥 UKURAN: ~2GB
+(Karena include Tor Browser + Chromium)
 
 ⚡ STEP 8 — OPTIMASI BIAR SIZE KECIL
 bash
@@ -235,90 +238,47 @@ akhtar-os/
 │
 └── dist/                   # Build hasil packaging
     └── Akhtar OS.exe       # File executable!
+🔧 AKHTAR POWER BRIDGE — INFO TAMBAHAN
+Kredit
+GHelper/PowerNative.cs diambil mentah/verbatim dari G-Helper oleh Serge (seerge), file app/Mode/PowerNative.cs, dilisensikan GNU GPL-3.0 (https://github.com/seerge/g-helper/blob/main/LICENSE).
 
+Perubahan cuma Logger.WriteLine → Console.Error.WriteLine dan sedikit penyesuaian parameter (lihat komentar di puncak file) supaya bisa berdiri sendiri tanpa AppConfig/Logger milik G-Helper.
 
+Karena akhtar-os memakai kode ini, akhtar-os secara keseluruhan didistribusikan di bawah GPL-3.0 — lihat LICENSE di root project.
 
+Kenapa Proses Terpisah, Bukan Native Addon?
+PowerNative.cs itu C#/.NET, sementara main.js Electron lu Node.js/V8 — dua runtime beda yang gak bisa "nempel" langsung. Daripada nulis ulang logikanya jadi C++ (rawan salah port), project ini compile kode C# G-Helper apa adanya jadi .exe berdiri sendiri, dipanggil dari Node lewat child_process.spawn + JSON di stdin/stdout.
 
-=================================================================================================================================================================
-# AkhtarPowerBridge
+Build
+Prasyarat: .NET 8 SDK — https://dotnet.microsoft.com/download
 
-## Kredit
-
-`GHelper/PowerNative.cs` diambil **mentah/verbatim** dari
-**[G-Helper](https://github.com/seerge/g-helper)** oleh Serge (seerge),
-file `app/Mode/PowerNative.cs`, dilisensikan **GNU GPL-3.0**
-(https://github.com/seerge/g-helper/blob/main/LICENSE). Perubahan cuma
-`Logger.WriteLine` → `Console.Error.WriteLine` dan sedikit penyesuaian
-parameter (lihat komentar di puncak file) supaya bisa berdiri sendiri
-tanpa AppConfig/Logger milik G-Helper.
-
-Karena akhtar-os memakai kode ini, **akhtar-os secara keseluruhan
-didistribusikan di bawah GPL-3.0** — lihat `LICENSE` di root project.
-
-## Kenapa proses terpisah, bukan native addon?
-
-`PowerNative.cs` itu C#/.NET, sementara `main.js` Electron lu Node.js/V8 —
-dua runtime beda yang gak bisa "nempel" langsung. Daripada nulis ulang
-logikanya jadi C++ (rawan salah port), project ini compile kode C# G-Helper
-apa adanya jadi `.exe` berdiri sendiri, dipanggil dari Node lewat
-`child_process.spawn` + JSON di stdin/stdout.
-
-## Build
-
-Prasyarat: **.NET 8 SDK** — https://dotnet.microsoft.com/download
-
-```powershell
+bash
 cd native\akhtar-power-bridge
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
 Hasilnya ada di:
-```
-bin\Release\net8.0-windows\win-x64\publish\AkhtarPowerBridge.exe
-```
 
+text
+bin\Release\net8.0-windows\win-x64\publish\AkhtarPowerBridge.exe
 Copy jadi:
-```powershell
+
+bash
 mkdir bin -Force
 copy bin\Release\net8.0-windows\win-x64\publish\AkhtarPowerBridge.exe bin\AkhtarPowerBridge.exe
-```
+Catatan: bridge.js nyari exe-nya persis di native\akhtar-power-bridge\bin\AkhtarPowerBridge.exe
 
-(`bridge.js` nyari exe-nya persis di `native\akhtar-power-bridge\bin\AkhtarPowerBridge.exe`)
-
-## Pakai dari main.js
-
-```js
+Pakai dari main.js
+javascript
 const powerBridge = require('./native/akhtar-power-bridge/bridge');
 
 const mode = await powerBridge.getPowerMode(); // GUID overlay yang lagi aktif
 await powerBridge.setPowerMode(1); // 1 = turbo (lihat PowerNative.GetDefaultPowerMode)
 await powerBridge.setOverlay('silent'); // langsung by nama
-```
+Sama seperti native/asus-wmi-addon: bungkus pemanggilan ini di main.js dengan try/catch. Kalau .exe belum di-build atau gagal jalan, biarkan app fallback ke jalur powercfg.exe yang lama — jangan biarkan fitur ini bikin app crash total.
 
-Sama seperti `native/asus-wmi-addon`: bungkus pemanggilan ini di `main.js`
-dengan `try/catch`. Kalau `.exe` belum di-build atau gagal jalan, biarkan
-app fallback ke jalur `powercfg.exe` yang lama — jangan biarkan fitur ini
-bikin app crash total.
+Menambah Command Lain dari G-Helper
+Kalau nanti mau nambah lagi kode G-Helper apa adanya (misal dari ModeControl.cs/Modes.cs), taro filenya di GHelper/ (dengan komentar kredit yang sama di puncak file), tambahin case baru di Program.cs (switch expression), lalu tambahin method baru yang sesuai di bridge.js.
 
-## Menambah command lain dari G-Helper
-
-Kalau nanti mau nambah lagi kode G-Helper apa adanya (misal dari
-`ModeControl.cs`/`Modes.cs`), taro filenya di `GHelper/` (dengan komentar
-kredit yang sama di puncak file), tambahin case baru di `Program.cs`
-(switch expression), lalu tambahin method baru yang sesuai di `bridge.js`.
-
-
-
-### Libraries Used:
-- Electron (MIT)
-- Three.js (MIT)
-- WebTorrent (MIT)
-- Bonjour-service (MIT)
-- G-Helper PowerBridge (GPL-3.0)
-
-
-
-📄 Lisensi
+📄 LISENSI
 Proyek ini dilisensikan di bawah GNU General Public License v3.0.
 
 Poin-Poin Penting:
@@ -350,3 +310,4 @@ A: Boleh, selama mereka gak distribusi ke luar. Tapi kalo distribusi (jual/grati
 
 Q: "Aman gak sih pake GPL-3.0 buat proyek gede kaya gini?"
 A: AMAN BANGET! Justru ini proteksi terbaik buat kode lu. Linux kernel, Git, WordPress pake GPL juga.
+
