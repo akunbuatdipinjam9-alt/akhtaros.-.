@@ -12,11 +12,6 @@ bash
 # Clone repository lu
 git clone https://github.com/akhtar-arch/akhtar-os.git
 cd akhtar-os
-⚠️ CATATAN:
-
-Kalo repo private, lu mesti invite collaborator atau pake SSH key
-
-Kalo gak ada .git karena lu develop lokal, langsung aja skip ke step 2
 
 📦 STEP 2 — INSTALL DEPENDENCIES
 bash
