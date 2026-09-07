@@ -355,3 +355,7 @@ A: `akhtar123`
 
 **Q: "Kenapa gak di GitHub Releases aja?"**
 A: File 2GB, GitHub Releases limit 2GB (kadang suka error). MediaFire lebih stabil.
+
+
+<img width="1684" height="834" alt="image" src="https://github.com/user-attachments/assets/128547bc-97da-4eec-babf-d773049ffbcc" />
+
