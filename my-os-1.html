@@ -23973,8 +23973,8 @@ if (_origAddNotif) {
 <script>
 // ========== PLUGIN STORE & INDEXEDDB SYSTEM ==========
 (function() {
-    const SUPABASE_URL = 'https://sxcvmrpcsrfsnyrwbkmb.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4Y3ZtcnBjc3Jmc255cndia21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Nzg2MDYsImV4cCI6MjA4ODA1NDYwNn0.EhhWM4a6mwEqsqzB7-MJOr8vuqr7gpQfZV7egdpYiL4';
+    const SUPABASE_URL = 'contoh supabase';
+    const SUPABASE_KEY = 'lu siapa jir pake supabase sendiri sana';
     const MAX_INSTALLED = 5;
     const DB_NAME = 'AkhtarPlugins';
     const STORE_NAME = 'installed';
@@ -24069,7 +24069,7 @@ if (_origAddNotif) {
 
     // ---- Supabase fetch helpers ----
     async function fetchPlugins() {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/plugins?banned=eq.false&select=*,plugin_screenshots(*)&order=created_at.desc', {
+        const res = await fetch(SUPABASE_URL + 'apa kek', {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
         return res.json();
