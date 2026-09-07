@@ -1,0 +1,4 @@
+C:\akhtaros\obj\Release\net8.0-windows\win-x64\AkhtarPowerBridge.GeneratedMSBuildEditorConfig.editorconfig
+C:\akhtaros\obj\Release\net8.0-windows\win-x64\AkhtarPowerBridge.AssemblyInfoInputs.cache
+C:\akhtaros\obj\Release\net8.0-windows\win-x64\AkhtarPowerBridge.AssemblyInfo.cs
+C:\akhtaros\obj\Release\net8.0-windows\win-x64\AkhtarPowerBridge.csproj.CoreCompileInputs.cache

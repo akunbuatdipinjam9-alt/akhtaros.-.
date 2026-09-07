@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="..">
+      <UniqueIdentifier>{13ED4249-1F9C-5F0F-2651-29A73F3A7059}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:">
+      <UniqueIdentifier>{F87FD356-0FEB-9BC5-D1FA-368C81420008}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros">
+      <UniqueIdentifier>{B36D0CDE-0C93-DA4B-0B04-E8A6BE1CDE73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules">
+      <UniqueIdentifier>{126A39EA-1D28-5689-C126-0DA0AB5837A0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules\@electron">
+      <UniqueIdentifier>{B48A0794-06D6-202E-A4A2-1179AE156A94}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules\@electron\rebuild">
+      <UniqueIdentifier>{D993BA0E-3A2B-A9BC-6446-442A10667533}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules\@electron\rebuild\node_modules">
+      <UniqueIdentifier>{126A39EA-1D28-5689-C126-0DA0AB5837A0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules\@electron\rebuild\node_modules\node-gyp">
+      <UniqueIdentifier>{49558BB4-6D34-CA91-A65D-85A65792DC11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="C:\akhtaros\node_modules\@electron\rebuild\node_modules\node-gyp\src">
+      <UniqueIdentifier>{F1003AD6-4B6D-45DF-3F56-5CAC869BF55E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{13ED4249-1F9C-5F0F-2651-29A73F3A7059}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\addon.cc">
+      <Filter>..</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\akhtaros\node_modules\@electron\rebuild\node_modules\node-gyp\src\win_delay_load_hook.cc">
+      <Filter>C:\akhtaros\node_modules\@electron\rebuild\node_modules\node-gyp\src</Filter>
+    </ClCompile>
+    <None Include="..\binding.gyp">
+      <Filter>..</Filter>
+    </None>
+  </ItemGroup>
+</Project>

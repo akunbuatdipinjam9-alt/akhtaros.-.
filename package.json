@@ -1,0 +1,120 @@
+{
+  "name": "akhtar-os",
+  "version": "1.0.0",
+  "description": "Akhtar OS Web Desktop for Linux",
+  "author": "Akhtar",
+  "homepage": "https://akhtar-os.local",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "kiosk": "bash scripts/akhtar-os-kiosk.sh",
+    "postinstall": "node-gyp rebuild -C native/asus-wmi-addon || echo \"native addon skip build (normal kalau bukan di Windows)\"",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.akhtar.os",
+    "productName": "Akhtar OS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!native/asus-wmi-addon/src",
+      "!native/asus-wmi-addon/build/**/*",
+      "native/asus-wmi-addon/build/Release/*.node",
+      "!**/*.{o,obj,pdb,exp,lib,iobj,ipdb}"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "akhtar-os.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "akhtar-os.ico",
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSLocationWhenInUseUsageDescription": "Akhtar OS butuh akses lokasi untuk scan jaringan Wi-Fi di sekitar (wajib dari Apple sejak macOS Big Sur).",
+        "NSMicrophoneUsageDescription": "Akhtar OS butuh akses microphone untuk fitur voice command \"Halo Akhtar\"."
+      }
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "maintainer": "Akhtar"
+    }
+  },
+  "dependencies": {
+    "axios": "^1.20.0",
+    "node-addon-api": "^8.0.0",
+    "tor-axios": "^2.1.1",
+    "webtorrent": "^3.0.21"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "node-gyp": "^10.0.0",
+    "png-to-ico": "^3.0.1"
+  },
+  "allowScripts": {
+    "node-datachannel@0.32.3": true,
+    "utp-native@2.5.3": true,
+    "bufferutil@4.1.0": true
+  }
+}
