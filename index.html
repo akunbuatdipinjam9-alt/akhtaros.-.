@@ -1,0 +1,1166 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080c12" />
+    <meta
+      name="description"
+      content="Akhtar OS — sistem desktop personal yang dibangun dari nol lewat browser, Electron, dan VirtualBox. 103+ modul, akses hardware nyata, dan runtime yang terus berkembang."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Akhtar OS" />
+    <meta property="og:title" content="Akhtar OS — Personal System Lab" />
+    <meta property="og:description" content="Sistem desktop personal yang dibangun dari nol: 103+ modul, akses hardware nyata, dan runtime yang terus berkembang dari browser sampai VirtualBox." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Akhtar OS — Personal System Lab" />
+    <meta name="twitter:description" content="Sistem desktop personal yang dibangun dari nol: 103+ modul, akses hardware nyata, dan runtime yang terus berkembang." />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234d93ff'/%3E%3Cpath d='M0 0h32v32H0z' fill='url(%23g)' opacity='0'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32'%3E%3Cstop stop-color='%234d93ff'/%3E%3Cstop offset='1' stop-color='%232c67be'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cpath d='M10 6h5v8h-5z' fill='%2307101c' transform='skewY(-14)'/%3E%3Cpath d='M6 20h11v4H6z' fill='%2307101c' transform='skewX(-14)'/%3E%3C/svg%3E" />
+    <title>Akhtar OS — Personal System Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+    <style>
+      :root {
+        --ink: #eaf2ff;
+        --muted: #9baabd;
+        --dim: #617083;
+        --void: #080c12;
+        --void-2: #0d131c;
+        --panel: #111923;
+        --panel-2: #15202c;
+        --line: #243242;
+        --line-soft: rgba(123, 157, 188, 0.13);
+        --blue: #4d93ff;
+        --aqua: #54e5d0;
+        --amber: #f7b955;
+        --danger: #ff717d;
+        --blue-wash: rgba(77, 147, 255, 0.12);
+        --radius: 15px;
+        --shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+      }
+
+      html[data-mode="wibu"] {
+        --blue: #ff72ad;
+        --aqua: #dba5ff;
+        --blue-wash: rgba(255, 114, 173, 0.13);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-width: 320px;
+        color: var(--ink);
+        background: var(--void);
+        font-family: "IBM Plex Sans", sans-serif;
+        overflow-x: hidden;
+      }
+      body.modal-open { overflow: hidden; }
+      button, a, input { font: inherit; }
+      button, a { -webkit-tap-highlight-color: transparent; }
+      button { cursor: pointer; }
+      a { color: inherit; text-decoration: none; }
+      ::selection { color: #061019; background: var(--aqua); }
+      .mono { font-family: "JetBrains Mono", monospace; }
+      .display { font-family: "Space Grotesk", sans-serif; }
+
+      .noise, .grid, .orb { position: fixed; pointer-events: none; z-index: -1; }
+      .noise {
+        inset: 0;
+        opacity: 0.04;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+      }
+      .grid {
+        inset: 0;
+        opacity: 0.36;
+        background-image: linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+        background-size: 64px 64px;
+        -webkit-mask-image: radial-gradient(ellipse 82% 54% at 50% 0%, #000 8%, transparent 75%);
+        mask-image: radial-gradient(ellipse 82% 54% at 50% 0%, #000 8%, transparent 75%);
+      }
+      .orb {
+        width: 54rem;
+        height: 32rem;
+        left: 52%;
+        top: -19rem;
+        transform: translateX(-50%);
+        border-radius: 50%;
+        background: radial-gradient(closest-side, var(--blue-wash), transparent 72%);
+        filter: blur(25px);
+        transition: background .3s ease;
+      }
+
+      .taskbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 58px;
+        padding: 0 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(8, 12, 18, 0.76);
+        border-bottom: 1px solid rgba(117, 150, 185, 0.18);
+        backdrop-filter: blur(20px) saturate(130%);
+        z-index: 50;
+      }
+      .brand-button, .nav-link, .header-action, .button {
+        border: 0;
+        color: var(--ink);
+        transition: transform 160ms var(--ease-out), color 160ms ease, background 160ms ease, border-color 160ms ease;
+      }
+      .brand-button:active, .button:active, .header-action:active { transform: scale(.97); }
+      .brand-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid var(--line);
+        background: rgba(17, 25, 35, .8);
+        border-radius: 10px;
+        padding: 7px 11px 7px 8px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .brand-button:hover { color: var(--aqua); border-color: var(--blue); }
+      .brand-mark {
+        position: relative;
+        width: 25px;
+        height: 25px;
+        flex: 0 0 auto;
+        overflow: hidden;
+        border-radius: 7px 3px 7px 3px;
+        background: linear-gradient(135deg, var(--blue), #2c67be);
+        box-shadow: inset 0 1px rgba(255,255,255,.25), 0 0 20px rgba(77,147,255,.22);
+      }
+      .brand-mark::before, .brand-mark::after {
+        content: "";
+        position: absolute;
+        background: #07101c;
+        transform: skew(-18deg);
+      }
+      .brand-mark::before { width: 6px; height: 18px; left: 8px; top: 4px; }
+      .brand-mark::after { width: 15px; height: 5px; left: 5px; bottom: 4px; }
+      .nav { display: flex; align-items: center; gap: 2px; }
+      .nav-link {
+        padding: 8px 10px;
+        border-radius: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .nav-link:hover, .nav-link.active { color: var(--ink); background: var(--panel-2); }
+      .header-right { margin-left: auto; display: flex; align-items: center; gap: 11px; }
+      .system-online {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--muted);
+        font-size: 10px;
+        letter-spacing: .045em;
+        white-space: nowrap;
+      }
+      .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 12px var(--aqua); animation: heartbeat 2.2s infinite; }
+      .clock { min-width: 45px; font-size: 11px; text-align: right; color: var(--ink); }
+      .header-action {
+        display: none;
+        width: 33px;
+        height: 33px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 9px;
+      }
+
+      main { position: relative; }
+      .shell { max-width: 1190px; margin: 0 auto; padding: 0 26px; }
+      .hero {
+        min-height: 720px;
+        padding: 156px 0 86px;
+        display: grid;
+        grid-template-columns: minmax(0, .94fr) minmax(420px, 1.06fr);
+        align-items: center;
+        gap: clamp(32px, 6vw, 80px);
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        color: var(--aqua);
+        background: rgba(17,25,35,.7);
+        letter-spacing: .075em;
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .hero h1 {
+        max-width: 660px;
+        margin: 20px 0 18px;
+        font-size: clamp(2.75rem, 5.5vw, 4.85rem);
+        line-height: .99;
+        letter-spacing: -.055em;
+      }
+      .hero h1 em { color: var(--blue); font-style: normal; }
+      .hero-copy { max-width: 59ch; color: var(--muted); font-size: 16px; line-height: 1.75; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 30px 0 34px; }
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 45px;
+        padding: 0 16px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .button:hover { transform: translateY(-2px); border-color: var(--blue); }
+      .button.primary { color: #08101a; background: var(--blue); border-color: var(--blue); box-shadow: 0 12px 28px rgba(77,147,255,.2); }
+      .button.primary:hover { filter: brightness(1.08); }
+      .button.ghost { color: var(--muted); }
+      .hero-metrics { display: flex; gap: 0; flex-wrap: wrap; }
+      .metric { min-width: 92px; padding: 0 19px; border-left: 1px solid var(--line); }
+      .metric:first-child { padding-left: 0; border-left: 0; }
+      .metric b { display: block; font: 700 18px/1.2 "JetBrains Mono", monospace; }
+      .metric span { display: block; max-width: 82px; margin-top: 5px; color: var(--dim); font: 10px/1.35 "JetBrains Mono", monospace; letter-spacing: .04em; text-transform: uppercase; }
+
+      .os-visual {
+        position: relative;
+        min-height: 425px;
+        border: 1px solid rgba(98, 134, 171, .3);
+        border-radius: 20px;
+        overflow: hidden;
+        background:
+          linear-gradient(150deg, rgba(5, 12, 21, .78), rgba(8, 13, 20, .95)),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='none' stroke='%234d93ff' stroke-width='1' opacity='.4'%3E%3Cpath d='M12 12H64V52H128'/%3E%3Cpath d='M24 128V84H100V36'/%3E%3C/g%3E%3Cg fill='%2354e5d0' opacity='.55'%3E%3Ccircle cx='64' cy='52' r='2.6'/%3E%3Ccircle cx='100' cy='36' r='2.6'/%3E%3C/g%3E%3Cg fill='%234d93ff' opacity='.55'%3E%3Ccircle cx='12' cy='12' r='2.6'/%3E%3Ccircle cx='24' cy='128' r='2.6'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 140px 140px,
+          #111b28;
+        box-shadow: var(--shadow), inset 0 1px rgba(255,255,255,.08);
+      }
+      .os-visual::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(90deg, rgba(8, 12, 18, .2), transparent 60%), repeating-linear-gradient(0deg, rgba(255,255,255,.016), rgba(255,255,255,.016) 1px, transparent 1px, transparent 4px);
+      }
+      .visual-topbar { position: absolute; inset: 0 0 auto; height: 42px; display: flex; align-items: center; gap: 7px; padding: 0 14px; background: rgba(6,12,20,.72); border-bottom: 1px solid rgba(152,180,213,.18); }
+      .window-dot { width: 8px; height: 8px; border-radius: 50%; background: #465568; }
+      .visual-file { margin-left: 6px; color: #8fa0b4; font: 10px "JetBrains Mono", monospace; }
+      .visual-status { margin-left: auto; color: var(--aqua); font: 9px "JetBrains Mono", monospace; }
+      .terminal-window {
+        position: absolute;
+        z-index: 1;
+        left: 34px;
+        top: 75px;
+        width: min(69%, 365px);
+        min-height: 240px;
+        padding: 15px 16px;
+        border: 1px solid rgba(122,155,190,.27);
+        border-radius: 12px;
+        background: rgba(9,15,24,.85);
+        box-shadow: 14px 20px 40px rgba(0,0,0,.25);
+        backdrop-filter: blur(7px);
+      }
+      .terminal-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 13px; color: #728297; font: 9px "JetBrains Mono", monospace; }
+      .bootlog { color: #aebccd; font: 11px/1.87 "JetBrains Mono", monospace; }
+      .bootline { opacity: 0; animation: line-in .32s forwards; }
+      .boot-ok { color: var(--aqua); }
+      .boot-path { color: var(--blue); }
+      .cursor { display: inline-block; width: 6px; height: 13px; margin-left: 3px; vertical-align: -2px; background: var(--blue); animation: blink 1s steps(1) infinite; }
+      .mini-window {
+        position: absolute;
+        z-index: 2;
+        right: 25px;
+        bottom: 32px;
+        width: min(51%, 260px);
+        padding: 12px;
+        border: 1px solid rgba(122,155,190,.3);
+        border-radius: 12px;
+        background: rgba(20, 31, 44, .9);
+        box-shadow: 15px 22px 40px rgba(0,0,0,.28);
+        backdrop-filter: blur(9px);
+      }
+      .mini-window header { display: flex; align-items: center; gap: 8px; color: #b9c7d7; font-size: 10px; font-weight: 700; }
+      .mini-window header i { color: var(--blue); }
+      .activity-bar { display: grid; grid-template-columns: repeat(9, 1fr); align-items: end; gap: 5px; height: 92px; padding: 13px 2px 2px; }
+      .activity-bar span { min-height: 13%; border-radius: 3px 3px 1px 1px; background: linear-gradient(var(--aqua), var(--blue)); opacity: .85; }
+      .visual-taskbar { position: absolute; inset: auto 0 0; z-index: 3; height: 35px; display: flex; align-items: center; justify-content: center; gap: 13px; border-top: 1px solid rgba(152,180,213,.15); background: rgba(5,9,15,.75); }
+      .visual-taskbar i { color: #9bb2ca; font-size: 12px; }
+      .visual-taskbar i:first-child { color: var(--blue); }
+
+      .section { padding: 94px 0; border-top: 1px solid var(--line-soft); }
+      .section-head { max-width: 660px; margin-bottom: 43px; }
+      .section-kicker { display: block; color: var(--blue); font: 700 10px "JetBrains Mono", monospace; letter-spacing: .13em; text-transform: uppercase; }
+      .section-title { margin: 13px 0; font: 700 clamp(2rem, 4vw, 3rem)/1.06 "Space Grotesk", sans-serif; letter-spacing: -.04em; }
+      .section-copy { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+
+      .spec-strip { display: grid; grid-template-columns: repeat(6, 1fr); margin-top: -30px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(16,24,34,.86); }
+      .spec { padding: 22px 16px; border-right: 1px solid var(--line); }
+      .spec:last-child { border: 0; }
+      .spec b { font: 700 clamp(17px, 2vw, 23px) "JetBrains Mono", monospace; }
+      .spec span { display: block; margin-top: 6px; color: var(--dim); font: 10px/1.35 "JetBrains Mono", monospace; letter-spacing: .06em; }
+
+      .build-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; }
+      .feature-large, .build-card, .hardware-card, .roadmap-card, .app-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(20,31,43,.96), rgba(13,20,29,.94)); border-radius: var(--radius); }
+      .feature-large { position: relative; overflow: hidden; padding: 30px; min-height: 332px; }
+      .feature-large::after { content: ""; position: absolute; width: 320px; height: 320px; right: -130px; top: -140px; border-radius: 50%; background: radial-gradient(circle, var(--blue-wash), transparent 67%); }
+      .feature-large .large-icon { position: relative; z-index: 1; display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid rgba(77,147,255,.35); border-radius: 13px; color: var(--blue); background: rgba(77,147,255,.09); font-size: 19px; }
+      .feature-large h3, .build-card h3, .hardware-card h3, .roadmap-card h3 { position: relative; z-index: 1; margin: 44px 0 10px; font: 700 22px "Space Grotesk", sans-serif; letter-spacing: -.025em; }
+      .feature-large p, .build-card p, .hardware-card p, .roadmap-card p { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+      .module-list { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+      .module-list span, .tag { padding: 5px 8px; border: 1px solid rgba(124,155,189,.22); border-radius: 6px; color: #a5b4c5; background: rgba(9,15,23,.4); font: 9px "JetBrains Mono", monospace; }
+      .build-aside { display: grid; gap: 18px; }
+      .build-card { min-height: 157px; padding: 23px; }
+      .build-card .card-label { color: var(--aqua); font: 10px "JetBrains Mono", monospace; }
+      .build-card h3 { margin: 19px 0 8px; font-size: 18px; }
+      .build-card p { font-size: 12px; }
+      .build-card i { float: right; color: var(--blue); font-size: 18px; }
+
+      .catalog-top { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 23px; }
+      .catalog-note { max-width: 390px; color: var(--dim); font: 10px/1.6 "JetBrains Mono", monospace; text-align: right; }
+      .tabs { display: flex; flex-wrap: wrap; gap: 7px; }
+      .tab { min-height: 34px; padding: 0 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; background: rgba(17,25,35,.68); font: 11px "JetBrains Mono", monospace; }
+      .tab:hover { color: var(--ink); border-color: #3c526a; }
+      .tab.active { color: var(--blue); border-color: var(--blue); background: var(--blue-wash); }
+      .app-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+      .app-card { min-height: 114px; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; transition: transform .18s var(--ease-out), border-color .18s ease, background .18s ease; }
+      .app-card:hover { transform: translateY(-3px); border-color: var(--blue); background: var(--panel-2); }
+      .app-card i { color: var(--aqua); font-size: 16px; }
+      .app-card b { display: block; margin-top: 17px; font-size: 12px; }
+      .app-card span { color: var(--dim); font: 9px "JetBrains Mono", monospace; }
+      .app-count { margin-top: 16px; color: var(--dim); font: 10px "JetBrains Mono", monospace; }
+
+      .hardware-layout { display: grid; grid-template-columns: 1fr .94fr; gap: 18px; }
+      .hardware-list { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); }
+      .hardware-row { display: grid; grid-template-columns: 35px minmax(0,1fr) auto; align-items: center; gap: 13px; padding: 16px; border-bottom: 1px solid var(--line); background: rgba(15,23,33,.84); }
+      .hardware-row:last-child { border: 0; }
+      .hardware-row > i { color: var(--blue); text-align: center; }
+      .hardware-row b { display: block; font-size: 13px; }
+      .hardware-row small { display: block; margin-top: 3px; color: var(--dim); font-size: 11px; }
+      .hardware-card { min-height: 100%; padding: 28px; background: linear-gradient(145deg, rgba(8,14,22,.96), rgba(12,24,32,.97)), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Crect x='7' y='7' width='6' height='6' rx='1.5' fill='none' stroke='%234d93ff' stroke-width='1' opacity='.35'/%3E%3Ccircle cx='40' cy='40' r='1.6' fill='%2354e5d0' opacity='.4'/%3E%3C/svg%3E") 0 0 / 64px 64px, #0c1520; }
+      .hardware-card .terminal-snippet { margin-top: 31px; padding: 15px; border: 1px solid rgba(117,151,184,.22); border-radius: 9px; background: rgba(8,13,20,.72); color: #acbbc9; font: 11px/1.9 "JetBrains Mono", monospace; }
+      .terminal-snippet .command { color: var(--amber); }
+      .terminal-snippet .api { color: var(--aqua); }
+      .terminal-snippet .output { color: var(--blue); }
+      .hardware-card h3 { margin-top: 0; }
+
+      .modes { display: grid; grid-template-columns: 1.03fr .97fr; gap: 18px; padding: 30px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(135deg, rgba(19,29,41,.95), rgba(10,16,24,.95)); }
+      .mode-row { display: flex; align-items: center; gap: 14px; padding: 15px 0; border-bottom: 1px solid var(--line-soft); }
+      .mode-row:last-child { border: 0; }
+      .mode-row b { display: block; font-size: 13px; }
+      .mode-row span { display: block; margin-top: 3px; color: var(--dim); font-size: 11px; }
+      .switch { position: relative; width: 43px; height: 25px; flex: 0 0 auto; margin-left: auto; padding: 0; border: 1px solid #33465a; border-radius: 100px; background: #192634; }
+      .switch::after { content: ""; position: absolute; width: 17px; height: 17px; top: 3px; left: 3px; border-radius: 50%; background: #75869a; transition: transform .2s var(--ease-out), background .2s; }
+      .switch.on { border-color: var(--blue); background: var(--blue-wash); }
+      .switch.on::after { transform: translateX(18px); background: var(--blue); }
+      .mode-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 265px; padding: 26px; border: 1px solid var(--line); border-radius: 13px; text-align: center; background: rgba(7,13,21,.55); }
+      .mode-preview i { color: var(--blue); font-size: 37px; transition: color .2s, transform .2s; }
+      .mode-preview .quote { max-width: 29ch; margin: 18px 0; color: var(--muted); font-size: 13px; font-style: italic; line-height: 1.65; }
+      .mode-preview .mode-name { color: var(--dim); font: 10px "JetBrains Mono", monospace; letter-spacing: .1em; }
+
+      .timeline { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+      .roadmap-card { position: relative; min-height: 262px; padding: 24px; overflow: hidden; }
+      .roadmap-card::before { content: ""; position: absolute; left: 0; top: 0; width: 3px; height: 100%; background: var(--blue); opacity: .75; }
+      .roadmap-card:nth-child(2)::before { background: var(--aqua); }
+      .roadmap-card:nth-child(3)::before { background: var(--amber); }
+      .roadmap-card .phase { color: var(--dim); font: 10px "JetBrains Mono", monospace; letter-spacing: .1em; }
+      .roadmap-card h3 { margin: 42px 0 10px; font-size: 20px; }
+      .roadmap-card .tag { display: inline-block; margin-top: 20px; color: var(--aqua); }
+
+      .stack-layout { display: grid; grid-template-columns: .9fr 1.1fr; gap: 50px; align-items: center; }
+      .stack-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+      .stack-chip { padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: rgba(17,25,35,.74); font: 11px "JetBrains Mono", monospace; transition: border-color .18s, color .18s, transform .18s var(--ease-out); }
+      .stack-chip:hover { transform: translateY(-2px); color: var(--ink); border-color: var(--blue); }
+      .stack-chip i { margin-right: 5px; color: var(--blue); }
+      .stack-note { padding: 23px; border-left: 2px solid var(--aqua); color: #b8c8d8; background: linear-gradient(90deg, rgba(84,229,208,.08), transparent); font-size: 15px; line-height: 1.7; }
+      .stack-note .mono { display: block; margin-top: 11px; color: var(--dim); font-size: 10px; }
+
+      .closing { padding: 112px 26px; text-align: center; border-top: 1px solid var(--line-soft); }
+      .closing h2 { max-width: 780px; margin: 18px auto; font: 700 clamp(2.35rem, 5vw, 4.1rem)/1 "Space Grotesk", sans-serif; letter-spacing: -.055em; }
+      .closing p { max-width: 600px; margin: 0 auto 28px; color: var(--muted); line-height: 1.7; }
+      footer { display: flex; justify-content: space-between; gap: 20px; padding: 26px; border-top: 1px solid var(--line-soft); color: var(--dim); font-size: 11px; }
+
+      .demo-modal { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(2,6,10,.76); backdrop-filter: blur(12px); }
+      .demo-modal.open { display: flex; animation: fade-in .18s ease; }
+      .demo-shell { position: relative; width: min(1110px, 100%); height: min(710px, 89vh); overflow: hidden; border: 1px solid rgba(153,187,220,.35); border-radius: 17px; background: #111b27; box-shadow: 0 36px 100px rgba(0,0,0,.55); }
+      .demo-shell::before { content: ""; position: absolute; inset: 0; background:
+          radial-gradient(58% 46% at 22% 18%, rgba(84,229,208,.22), transparent 68%),
+          radial-gradient(64% 52% at 82% 78%, rgba(77,147,255,.28), transparent 70%),
+          linear-gradient(160deg, #0d1a26, #060a10); opacity: .85; }
+      .demo-topbar { position: relative; z-index: 2; height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 13px; border-bottom: 1px solid rgba(255,255,255,.15); background: rgba(7,12,19,.66); }
+      .demo-topbar b { margin-left: 5px; font: 700 11px "JetBrains Mono", monospace; }
+      .demo-topbar span { color: #97a8ba; font-size: 10px; }
+      .open-external { margin-left: auto; padding: 6px 8px; border: 1px solid rgba(185,213,238,.2); border-radius: 7px; color: #bed1e3; font: 10px "JetBrains Mono", monospace; }
+      .open-external:hover { color: var(--aqua); border-color: var(--blue); }
+      .close-demo { margin-left: auto; width: 28px; height: 28px; border: 0; border-radius: 7px; color: #d7e4f0; background: transparent; }
+      .close-demo:hover { color: white; background: rgba(255,255,255,.12); }
+      .demo-desktop { position: absolute; z-index: 1; inset: 42px 0 38px; }
+      .demo-frame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+      .demo-icons { display: grid; grid-template-columns: repeat(2, 76px); gap: 10px; width: min-content; padding: 19px; }
+      .desktop-app { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 76px; padding: 7px; border: 0; border-radius: 8px; color: white; background: transparent; text-shadow: 0 1px 4px rgba(0,0,0,.75); font-size: 10px; }
+      .desktop-app:hover { background: rgba(255,255,255,.16); }
+      .desktop-app i { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(255,255,255,.23); border-radius: 11px; color: #d8f1ff; background: rgba(14,38,57,.62); font-size: 17px; }
+      .demo-card { position: absolute; left: 50%; top: 50%; width: min(480px, calc(100% - 190px)); transform: translate(-50%, -50%); overflow: hidden; border: 1px solid rgba(255,255,255,.2); border-radius: 12px; background: rgba(11,19,29,.9); box-shadow: 0 18px 50px rgba(0,0,0,.4); backdrop-filter: blur(14px); }
+      .demo-card header { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 11px; border-bottom: 1px solid rgba(255,255,255,.12); color: #d7e4f0; font-size: 11px; }
+      .demo-card header i { color: var(--aqua); }
+      .demo-card main { padding: 22px; }
+      .demo-card h3 { margin: 0; font: 700 23px "Space Grotesk", sans-serif; }
+      .demo-card p { margin: 10px 0 20px; color: #a5b5c4; font-size: 13px; line-height: 1.6; }
+      .demo-card .demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .demo-card .demo-grid span { padding: 10px; border: 1px solid rgba(141,174,207,.18); border-radius: 7px; color: #b6c7d7; background: rgba(255,255,255,.04); font: 10px "JetBrains Mono", monospace; }
+      .demo-startmenu { position: absolute; z-index: 6; left: 13px; bottom: 49px; width: 295px; padding: 13px; border: 1px solid rgba(185,213,238,.28); border-radius: 12px; background: rgba(9,16,25,.92); box-shadow: 0 18px 48px rgba(0,0,0,.44); backdrop-filter: blur(19px); opacity: 0; pointer-events: none; transform: translateY(8px) scale(.98); transition: opacity .18s ease, transform .18s var(--ease-out); }
+      .demo-startmenu.open { opacity: 1; pointer-events: auto; transform: none; }
+      .menu-user { display: flex; align-items: center; gap: 9px; padding: 6px; font-size: 11px; font-weight: 700; }
+      .user-avatar { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; color: #07111c; background: var(--blue); }
+      .menu-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 12px; }
+      .menu-grid button { min-height: 62px; padding: 7px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: #bdcedd; background: rgba(255,255,255,.04); font-size: 10px; }
+      .menu-grid button:hover { border-color: var(--blue); background: var(--blue-wash); }
+      .menu-grid i { display: block; margin-bottom: 6px; color: var(--aqua); font-size: 14px; }
+      .demo-taskbar { position: absolute; z-index: 5; inset: auto 0 0; height: 38px; display: flex; align-items: center; justify-content: center; gap: 12px; border-top: 1px solid rgba(255,255,255,.15); background: rgba(6,11,18,.7); backdrop-filter: blur(10px); }
+      .demo-taskbar button { width: 27px; height: 27px; border: 0; border-radius: 7px; color: #b9c9d8; background: transparent; }
+      .demo-taskbar button:hover, .demo-taskbar button.active { color: white; background: rgba(255,255,255,.14); }
+      .demo-taskbar .demo-time { position: absolute; right: 12px; color: #b8c8d8; font: 9px "JetBrains Mono", monospace; }
+      .toast { position: fixed; z-index: 90; left: 50%; bottom: 24px; padding: 10px 13px; border: 1px solid rgba(123,159,196,.35); border-radius: 9px; color: #dcecff; background: rgba(13,23,34,.94); box-shadow: var(--shadow); font: 11px "JetBrains Mono", monospace; opacity: 0; transform: translate(-50%, 12px); pointer-events: none; transition: opacity .18s ease, transform .18s var(--ease-out); }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+      .reveal { opacity: 0; transform: translateY(17px); transition: opacity .5s var(--ease-out), transform .5s var(--ease-out); }
+      .reveal.visible { opacity: 1; transform: none; }
+      @keyframes heartbeat { 0%,100% { opacity: 1; } 50% { opacity: .36; } }
+      @keyframes blink { 50% { opacity: 0; } }
+      @keyframes line-in { to { opacity: 1; } }
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+      /* ===== RECRUITER VIEW ===== */
+      .featured-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+      .featured-card { position: relative; min-height: 255px; padding: 25px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(20,31,43,.96), rgba(13,20,29,.94)); }
+      .featured-card::after { content: ""; position: absolute; width: 180px; height: 180px; right: -72px; top: -70px; border-radius: 50%; background: radial-gradient(circle, var(--blue-wash), transparent 68%); pointer-events: none; }
+      .featured-card .featured-icon { position: relative; z-index: 1; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(77,147,255,.35); border-radius: 12px; color: var(--blue); background: rgba(77,147,255,.09); font-size: 17px; }
+      .featured-card h3 { position: relative; z-index: 1; margin: 25px 0 9px; font: 700 20px "Space Grotesk", sans-serif; letter-spacing: -.025em; }
+      .featured-card p { position: relative; z-index: 1; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+      .featured-tags { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+      .featured-tags .tag { color: var(--aqua); }
+      .case-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 18px; }
+      .case-panel, .case-code { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(145deg, rgba(20,31,43,.96), rgba(13,20,29,.94)); }
+      .case-panel { padding: 28px; }
+      .case-panel h3 { margin: 0 0 22px; font: 700 22px "Space Grotesk", sans-serif; }
+      .case-step { padding: 16px 0; border-top: 1px solid var(--line-soft); }
+      .case-step:first-of-type { border-top: 0; padding-top: 0; }
+      .case-step b { display: block; color: var(--aqua); font: 10px "JetBrains Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+      .case-step p { margin: 7px 0 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+      .case-code { position: relative; overflow: hidden; padding: 24px; background: #09111b; }
+      .case-code::before { content: "ARCHITECTURE / SECURITY BOUNDARY"; display: block; margin-bottom: 18px; color: var(--dim); font: 10px "JetBrains Mono", monospace; letter-spacing: .08em; }
+      .case-code pre { margin: 0; overflow-x: auto; color: #b9c9d8; font: 12px/1.9 "JetBrains Mono", monospace; white-space: pre-wrap; }
+      .case-code .accent { color: var(--aqua); }
+      .case-code .blue { color: var(--blue); }
+      .case-code .amber { color: var(--amber); }
+      .recruiter-panel { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 30px; padding: 30px; border: 1px solid rgba(84,229,208,.25); border-radius: 18px; background: linear-gradient(135deg, rgba(19,39,48,.96), rgba(12,20,29,.96)); }
+      .recruiter-panel h2 { margin: 12px 0 10px; font: 700 clamp(1.8rem, 3.5vw, 2.8rem)/1.06 "Space Grotesk", sans-serif; letter-spacing: -.04em; }
+      .recruiter-panel p { max-width: 650px; margin: 0; color: var(--muted); line-height: 1.7; }
+      .recruiter-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+      .recruiter-meta span { padding: 7px 9px; border: 1px solid rgba(124,155,189,.22); border-radius: 7px; color: #b8c8d8; background: rgba(8,14,22,.42); font: 10px "JetBrains Mono", monospace; }
+      .recruiter-actions { display: flex; flex-direction: column; gap: 9px; min-width: 205px; }
+      .button-note { color: currentColor; opacity: .72; font: 10px "JetBrains Mono", monospace; }
+      .copy-brief { border-color: rgba(84,229,208,.32); }
+
+      @media (max-width: 1050px) {
+        .hero { grid-template-columns: 1fr; min-height: auto; padding-top: 128px; }
+        .hero-copy { max-width: 65ch; }
+        .os-visual { width: min(700px, 100%); min-height: 390px; }
+        .app-grid { grid-template-columns: repeat(4, 1fr); }
+        .spec-strip { grid-template-columns: repeat(3, 1fr); }
+        .spec:nth-child(3) { border-right: 0; }
+        .spec:nth-child(-n+3) { border-bottom: 1px solid var(--line); }
+      }
+      @media (max-width: 790px) {
+        .taskbar { height: 54px; padding: 0 12px; }
+        .nav, .system-online { display: none; }
+        .header-action { display: inline-flex; }
+        .hero { padding-top: 112px; }
+        .build-grid, .hardware-layout, .modes, .stack-layout, .featured-grid, .case-grid { grid-template-columns: 1fr; }
+        .recruiter-panel { grid-template-columns: 1fr; }
+        .recruiter-actions { flex-direction: row; flex-wrap: wrap; min-width: 0; }
+        .timeline { grid-template-columns: 1fr; }
+        .catalog-top { display: block; }
+        .catalog-note { margin-top: 13px; text-align: left; }
+        .app-grid { grid-template-columns: repeat(3, 1fr); }
+        .modes { padding: 19px; }
+        .mode-preview { min-height: 195px; }
+        .stack-layout { gap: 28px; }
+      }
+      @media (max-width: 550px) {
+        .shell { padding: 0 17px; }
+        .brand-button { padding-right: 8px; }
+        .brand-button > span { display: none; }
+        .hero { padding-bottom: 70px; }
+        .hero h1 { font-size: clamp(2.55rem, 13vw, 3.7rem); }
+        .hero-copy { font-size: 14px; }
+        .metric { min-width: 50%; margin-top: 16px; padding-left: 12px; }
+        .metric:nth-child(odd) { padding-left: 0; border-left: 0; }
+        .metric:nth-child(n+3) { border-top: 1px solid var(--line); padding-top: 14px; }
+        .os-visual { min-height: 338px; }
+        .terminal-window { left: 14px; top: 59px; width: calc(100% - 28px); min-height: 205px; }
+        .mini-window { display: none; }
+        .spec-strip { grid-template-columns: repeat(2, 1fr); }
+        .spec:nth-child(3) { border-right: 1px solid var(--line); }
+        .spec:nth-child(odd) { border-right: 1px solid var(--line); }
+        .spec:nth-child(even) { border-right: 0; }
+        .spec:nth-child(-n+4) { border-bottom: 1px solid var(--line); }
+        .spec:nth-child(3) { border-bottom: 1px solid var(--line); }
+        .section { padding: 72px 0; }
+        .app-grid { grid-template-columns: repeat(2, 1fr); }
+        .hardware-row { grid-template-columns: 28px minmax(0,1fr); }
+        .hardware-row .tag { display: none; }
+        .demo-card { left: 50%; width: calc(100% - 35px); }
+        .demo-icons { grid-template-columns: 60px; padding: 9px; }
+        .desktop-app { width: 58px; font-size: 8px; }
+        .demo-shell { height: min(630px, 88vh); }
+        footer { align-items: flex-start; flex-direction: column; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; transition-duration: .001ms !important; }
+      }
+
+      /* ===== BOOT GATE ===== */
+      body.boot-locked { overflow: hidden; height: 100vh; }
+      .boot-gate {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background:
+          radial-gradient(ellipse 70% 50% at 50% 0%, rgba(77,147,255,.14), transparent 65%),
+          var(--void);
+        padding: 20px;
+        transition: opacity .6s var(--ease-out), filter .6s var(--ease-out), visibility .6s;
+      }
+      .boot-gate::before {
+        content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .35;
+        background-image: linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+        background-size: 46px 46px;
+        mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 10%, transparent 78%);
+      }
+      .boot-gate::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .05;
+        background: repeating-linear-gradient(0deg, #cfe0ff 0px, #cfe0ff 1px, transparent 1px, transparent 3px);
+        animation: bootScan 7s linear infinite;
+      }
+      @keyframes bootScan { 0% { transform: translateY(0); } 100% { transform: translateY(120px); } }
+      .boot-gate.boot-gate-hide { opacity: 0; filter: blur(6px); visibility: hidden; pointer-events: none; }
+
+      .boot-gate-inner {
+        position: relative; width: min(640px, 100%);
+        background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+        box-shadow: var(--shadow); overflow: hidden;
+        animation: bootIn .7s var(--ease-out);
+      }
+      @keyframes bootIn { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+      .boot-gate-topbar {
+        display: flex; align-items: center; gap: 8px; padding: 12px 16px;
+        background: var(--panel-2); border-bottom: 1px solid var(--line);
+        font: 500 12px/1 "JetBrains Mono", monospace; color: var(--dim);
+      }
+      .boot-gate-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+      .boot-gate-dot:nth-child(1) { background: #ff717d; }
+      .boot-gate-dot:nth-child(2) { background: var(--amber); }
+      .boot-gate-dot:nth-child(3) { background: var(--aqua); }
+      .boot-gate-title { margin-left: 4px; color: var(--muted); }
+      .boot-gate-badge {
+        margin-left: auto; color: var(--aqua); letter-spacing: .04em; font-weight: 600;
+        display: flex; align-items: center; gap: 6px;
+      }
+      .boot-gate-badge i { width: 6px; height: 6px; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 0 3px rgba(84,229,208,.18); animation: bootPulse 1.4s ease-in-out infinite; }
+      @keyframes bootPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+      .boot-gate-body { padding: 22px 20px 18px; }
+      .boot-gate-log {
+        min-height: 214px; font: 12.5px/1.9 "JetBrains Mono", monospace; color: #aebccd;
+      }
+      .boot-gate-line { opacity: 0; animation: bootLineIn .35s ease forwards; white-space: pre-wrap; word-break: break-word; }
+      @keyframes bootLineIn { to { opacity: 1; } }
+      .boot-gate-line .ok { color: var(--aqua); font-weight: 600; }
+      .boot-gate-line .path { color: var(--blue); }
+      .boot-gate-line .grant { color: var(--aqua); font-weight: 700; letter-spacing: .03em; }
+      .boot-gate-line .dim { color: var(--dim); }
+      .boot-caret {
+        display: inline-block; width: 7px; height: 13px; margin-left: 2px; background: var(--aqua);
+        vertical-align: -2px; animation: bootBlink 1s step-end infinite;
+      }
+      @keyframes bootBlink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+      .boot-gate-progress-row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+      .boot-gate-progress { flex: 1; height: 6px; border-radius: 99px; background: var(--void-2); border: 1px solid var(--line); overflow: hidden; }
+      .boot-gate-progress-fill {
+        height: 100%; width: 0%; border-radius: 99px;
+        background: linear-gradient(90deg, var(--blue), var(--aqua));
+        transition: width .5s var(--ease-out);
+      }
+      .boot-gate-percent { font: 600 12px/1 "JetBrains Mono", monospace; color: var(--muted); min-width: 38px; text-align: right; }
+
+      .boot-gate-skip {
+        position: absolute; top: 14px; right: 14px;
+        background: transparent; border: 1px solid var(--line); color: var(--dim);
+        font: 500 11px/1 "JetBrains Mono", monospace; padding: 7px 11px; border-radius: 99px;
+        display: flex; align-items: center; gap: 6px; opacity: 0; transition: opacity .3s ease, color .2s ease, border-color .2s ease;
+      }
+      .boot-gate-topbar ~ .boot-gate-skip { top: 46px; }
+      .boot-gate-inner:hover .boot-gate-skip, .boot-gate-skip:focus-visible { opacity: 1; }
+      .boot-gate-skip:hover, .boot-gate-skip:focus-visible { color: var(--ink); border-color: var(--blue); }
+
+      @media (max-width: 560px) {
+        .boot-gate-log { min-height: 250px; font-size: 11.5px; }
+        .boot-gate-inner { border-radius: 12px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-gate, .boot-gate-line, .boot-caret, .boot-gate::after { animation: none !important; }
+      }
+    </style>
+  </head>
+  <body class="boot-locked">
+    <div class="boot-gate" id="bootGate" role="status" aria-live="polite">
+      <div class="boot-gate-inner">
+        <div class="boot-gate-topbar">
+          <span class="boot-gate-dot"></span><span class="boot-gate-dot"></span><span class="boot-gate-dot"></span>
+          <span class="boot-gate-title">akhtar@os:~ $ ./boot --target=portfolio</span>
+          <span class="boot-gate-badge"><i></i>BOOTING</span>
+        </div>
+        <div class="boot-gate-body">
+          <div class="boot-gate-log" id="bootGateLog"></div>
+          <div class="boot-gate-progress-row">
+            <div class="boot-gate-progress"><div class="boot-gate-progress-fill" id="bootGateFill"></div></div>
+            <span class="boot-gate-percent mono" id="bootGatePercent">0%</span>
+          </div>
+        </div>
+        <button class="boot-gate-skip" id="bootGateSkip" type="button">Lewati <i class="fa-solid fa-forward"></i></button>
+      </div>
+    </div>
+
+    <div class="noise"></div>
+    <div class="grid"></div>
+    <div class="orb"></div>
+
+    <header class="taskbar" aria-label="Navigasi Akhtar OS">
+      <button class="brand-button" id="homeButton" aria-label="Kembali ke atas">
+        <span class="brand-mark" aria-hidden="true"></span><span>AKHTAR <em style="color:var(--aqua);font-style:normal">OS</em></span>
+      </button>
+      <nav class="nav" aria-label="Bagian halaman">
+        <a class="nav-link active" href="#overview">Ringkasan</a>
+        <a class="nav-link" href="#apps">Aplikasi</a>
+        <a class="nav-link" href="#system">Sistem</a>
+        <a class="nav-link" href="#hardware">Hardware</a>
+        <a class="nav-link" href="#timeline">Evolusi</a>
+        <a class="nav-link" href="#stack">Stack</a>
+        <a class="nav-link" href="#featured">Engineering</a>
+        <a class="nav-link" href="#case-study">Case Study</a>
+      </nav>
+      <div class="header-right">
+        <span class="system-online"><i class="online-dot"></i> SYSTEM ONLINE</span>
+        <span class="clock mono" id="clock">--:--</span>
+        <button class="header-action" id="mobileDemo" aria-label="Buka demo desktop"><i class="fa-solid fa-table-cells-large"></i></button>
+      </div>
+    </header>
+
+    <main>
+      <section class="shell hero" id="overview">
+        <div class="reveal">
+          <span class="eyebrow mono"><i class="fa-solid fa-circle-nodes"></i> PROYEK PRIBADI · AKHTAR OS</span>
+          <h1 class="display">Dari file HTML iseng,<br />sekarang gw coba bawa ke <em>VirtualBox.</em></h1>
+          <p class="hero-copy">Awalnya gw cuma pengen bikin desktop yang bisa dibuka di browser. Lama-lama jadi kepikiran: kalau taskbar, login, window manager, sampai terminalnya gw bikin sendiri, gw jadi lebih ngerti nggak cara kerja sistem? Dari situ Akhtar OS jalan terus—dari satu file HTML, nyoba Electron, sampai berhasil dibuka di VirtualBox.</p>
+          <div class="hero-actions">
+            <button class="button primary" id="launchDemo"><i class="fa-solid fa-power-off"></i> Nyalakan preview</button>
+            <a class="button ghost" href="#apps"><i class="fa-solid fa-grid-2"></i> Jelajahi modul</a>
+            <a class="button ghost" href="#featured"><i class="fa-solid fa-code"></i> Lihat engineering work</a>
+          </div>
+          <div class="hero-metrics" aria-label="Statistik Akhtar OS">
+            <div class="metric"><b>103+</b><span>modul & aplikasi</span></div>
+            <div class="metric"><b>4</b><span>cara login</span></div>
+            <div class="metric"><b>13+</b><span>hardware Web API</span></div>
+            <div class="metric"><b>14</b><span>bahasa antarmuka</span></div>
+          </div>
+        </div>
+        <div class="os-visual reveal" aria-label="Ilustrasi boot Akhtar OS">
+          <div class="visual-topbar"><i class="window-dot"></i><i class="window-dot"></i><i class="window-dot"></i><span class="visual-file">boot.log — akhtar-os</span><span class="visual-status">ONLINE</span></div>
+          <div class="terminal-window">
+            <div class="terminal-label"><span>TERMINAL / INIT</span><span>v6.x</span></div>
+            <div class="bootlog" id="bootlog" aria-live="polite"></div>
+          </div>
+          <div class="mini-window" aria-hidden="true">
+            <header><i class="fa-solid fa-chart-simple"></i> System Monitor <span style="margin-left:auto;color:var(--aqua);font-family:var(--mono)">nominal</span></header>
+            <div class="activity-bar"><span style="height:31%"></span><span style="height:47%"></span><span style="height:38%"></span><span style="height:73%"></span><span style="height:56%"></span><span style="height:82%"></span><span style="height:63%"></span><span style="height:91%"></span><span style="height:71%"></span></div>
+          </div>
+          <div class="visual-taskbar"><i class="fa-solid fa-window-maximize"></i><i class="fa-regular fa-folder"></i><i class="fa-solid fa-terminal"></i><i class="fa-solid fa-gear"></i></div>
+        </div>
+      </section>
+
+      <section class="shell" aria-label="Spesifikasi sistem">
+        <div class="spec-strip reveal">
+          <div class="spec"><b>103+</b><span>APLIKASI / MODUL</span></div>
+          <div class="spec"><b>41</b><span>GAME TERINTEGRASI</span></div>
+          <div class="spec"><b>4</b><span>METODE LOGIN</span></div>
+          <div class="spec"><b>4</b><span>MODE ANTARMUKA</span></div>
+          <div class="spec"><b>13+</b><span>WEB HARDWARE API</span></div>
+          <div class="spec"><b>14</b><span>BAHASA ANTARMUKA</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="build">
+        <div class="shell">
+          <header class="section-head reveal">
+              <span class="section-kicker">CATATAN BUILD / 01</span>
+              <h2 class="section-title">Yang awalnya cuma jalan di tab browser, sekarang sudah punya jalur ke desktop.</h2>
+              <p class="section-copy">Versi awalnya udah punya boot screen, login, desktop virtual, taskbar, window manager, dan mode mobile. Setelah itu gw mulai nyoba arsitektur desktop biar Akhtar OS nggak berhenti sebagai demo browser doang.</p>
+          </header>
+          <div class="build-grid">
+            <article class="feature-large reveal">
+              <div class="large-icon"><i class="fa-solid fa-window-restore"></i></div>
+              <h3>Bagian yang bikin gw ketagihan ngoprek: window manager.</h3>
+              <p>Gw bikin aplikasi tampil sebagai jendela sendiri, bisa dibuka dari desktop atau Start Menu, dipindah fokusnya, dan dipakai barengan. Belum sekompleks desktop OS besar, tapi dari sini gw mulai paham kenapa urusan jendela ternyata banyak detail kecilnya.</p>
+              <div class="module-list"><span>DRAG WINDOW</span><span>RESIZE</span><span>TASKBAR STATE</span><span>VIRTUAL DESKTOP</span></div>
+            </article>
+            <div class="build-aside">
+              <article class="build-card reveal"><i class="fa-solid fa-right-to-bracket"></i><span class="card-label">LOGIN EXPERIMENT</span><h3>Gw nyoba lebih dari satu cara masuk.</h3><p>Password, PIN, gesture, dan opsi face login gw masukin biar bagian login-nya nggak terasa cuma layar formalitas.</p></article>
+              <article class="build-card reveal"><i class="fa-solid fa-mobile-screen-button"></i><span class="card-label">LAYOUT EXPERIMENT</span><h3>Desktop, mobile, sampai car mode.</h3><p>Gw juga nyoba bentuk lain dari shell-nya: ada home screen mobile, app drawer, notification shade, dan konsep tampilan gede buat dashboard mobil.</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="featured">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">RECRUITER VIEW / 01</span>
+            <h2 class="section-title">Bukan cuma kelihatan seperti desktop. Ini bagian engineering yang benar-benar gw bangun.</h2>
+            <p class="section-copy">Kalau lu cuma punya waktu sebentar, mulai dari empat bagian ini. Masing-masing menunjukkan cara gw memecah masalah, menghubungkan sistem, dan belajar dari batasan platform.</p>
+          </header>
+          <div class="featured-grid">
+            <article class="featured-card reveal">
+              <div class="featured-icon"><i class="fa-solid fa-window-restore"></i></div>
+              <h3>Desktop runtime & window manager</h3>
+              <p>Menghubungkan shell browser ke Electron melalui main process, preload API, WebContentsView, fokus jendela, resize, taskbar state, dan akses filesystem yang dibatasi.</p>
+              <div class="featured-tags"><span class="tag">ELECTRON</span><span class="tag">IPC</span><span class="tag">WEB CONTENTS VIEW</span></div>
+            </article>
+            <article class="featured-card reveal">
+              <div class="featured-icon"><i class="fa-brands fa-python"></i></div>
+              <h3>Terminal Python multi-engine</h3>
+              <p>Terminal bukan sekadar tampilan teks. User bisa memilih engine Pyodide, Skulpt, atau Brython dari command line untuk kebutuhan Python yang berbeda.</p>
+              <div class="featured-tags"><span class="tag">PYODIDE</span><span class="tag">SKULPT</span><span class="tag">BRYTHON</span></div>
+            </article>
+            <article class="featured-card reveal">
+              <div class="featured-icon"><i class="fa-solid fa-plug"></i></div>
+              <h3>Plugin, storage, dan state</h3>
+              <p>Plugin Store memakai Supabase sebagai backend dan IndexedDB untuk menyimpan plugin yang sudah dipasang agar state tetap bertahan setelah reload.</p>
+              <div class="featured-tags"><span class="tag">SUPABASE</span><span class="tag">INDEXEDDB</span><span class="tag">PERSISTENCE</span></div>
+            </article>
+            <article class="featured-card reveal">
+              <div class="featured-icon"><i class="fa-solid fa-microchip"></i></div>
+              <h3>Hardware permission lab</h3>
+              <p>Menguji WebUSB, WebBluetooth, WebSerial, WebHID, Gamepad, Web MIDI, dan runtime Wi-Fi dengan permission flow serta fallback saat hardware tidak didukung.</p>
+              <div class="featured-tags"><span class="tag">WEB API</span><span class="tag">PERMISSION</span><span class="tag">HARDWARE</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="apps">
+        <div class="shell">
+          <div class="catalog-top">
+            <header class="section-head reveal" style="margin-bottom:0">
+              <span class="section-kicker">CATATAN BUILD / 02</span>
+              <h2 class="section-title">Kalau lagi penasaran sama sesuatu, biasanya gw bikin aplikasinya.</h2>
+              <p class="section-copy">Daftar ini nyatuin modul dari source browser Akhtar OS. Ada yang gw bikin buat kepake, ada yang gw bikin cuma karena penasaran bisa jalan apa nggak.</p>
+            </header>
+            <p class="catalog-note">Pilih kategori buat lihat modul yang ada.<br />Daftar ini diambil langsung dari source Akhtar OS — 103+ item asli, bukan contoh.</p>
+          </div>
+          <div class="tabs reveal" id="appTabs" role="tablist" aria-label="Kategori aplikasi">
+            <button class="tab active" role="tab" aria-selected="true" data-category="all">Semua</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="produktif">Produktivitas</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="kreatif">Kreatif</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="sistem">Sistem</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="hardware">Hardware</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="hiburan">Hiburan</button>
+            <button class="tab" role="tab" aria-selected="false" data-category="jaringan">Jaringan</button>
+          </div>
+          <div class="app-grid reveal" id="appGrid" aria-live="polite"></div>
+          <p class="app-count" id="appCount"></p>
+        </div>
+      </section>
+
+      <section class="section" id="system">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">CATATAN BUILD / 03</span>
+            <h2 class="section-title">Bagian yang nggak keliatan dari luar, tapi paling lama gw kerjain.</h2>
+            <p class="section-copy">Ikon-ikon di katalog itu cuma permukaan. Di baliknya ada beberapa sistem inti yang harus gw bangun dulu sebelum aplikasi-aplikasi itu bisa jalan bareng dalam satu OS.</p>
+          </header>
+          <div class="build-grid">
+            <article class="feature-large reveal">
+              <div class="large-icon"><i class="fa-brands fa-python"></i></div>
+              <h3>Terminal-nya bisa jalanin Python beneran, tiga cara sekaligus.</h3>
+              <p>Ini bagian yang paling lama gw utak-atik. Terminal Akhtar OS nggak cuma nge-print teks—dia bisa eksekusi kode Python sungguhan lewat tiga engine yang bisa dipilih langsung dari command line: Pyodide buat CPython 3.11 penuh dengan NumPy dan Pandas, Skulpt buat scripting ringan yang cepat kebuka, dan Brython kalau Python-nya perlu nyentuh DOM halaman langsung. Tinggal ketik <span class="mono" style="color:var(--aqua)">use pyodide</span> atau <span class="mono" style="color:var(--aqua)">use skulpt</span>, engine-nya pindah saat itu juga.</p>
+              <div class="module-list"><span>PYODIDE / CPYTHON 3.11</span><span>SKULPT</span><span>BRYTHON + DOM</span><span>ENGINE SWITCHER</span></div>
+            </article>
+            <div class="build-aside">
+              <article class="build-card reveal"><i class="fa-solid fa-fingerprint"></i><span class="card-label">LOGIN SYSTEM</span><h3>Empat cara masuk, satu akun.</h3><p>Password, PIN dengan pin-pad, gesture yang digambar di canvas, sampai face scan—semua bisa dipilih langsung dari layar login yang sama.</p></article>
+              <article class="build-card reveal"><i class="fa-solid fa-cloud-arrow-down"></i><span class="card-label">PLUGIN STORE</span><h3>Fitur baru bisa di-install, bukan cuma di-hardcode.</h3><p>Terhubung ke Supabase sebagai backend, plugin yang diinstall disimpan di IndexedDB lokal sehingga tetap aktif walau OS di-reload.</p></article>
+            </div>
+          </div>
+          <div class="build-grid" style="margin-top:18px">
+            <div class="build-aside">
+              <article class="build-card reveal"><i class="fa-solid fa-mobile-screen-button"></i><span class="card-label">MOBILE MODE</span><h3>Bukan cuma responsive—dibangun ulang dari nol.</h3><p>Saat kebuka di HP, seluruh shell berubah jadi antarmuka ala Android: home screen, app drawer geser ke atas, notification shade tarik dari atas, panel recent apps, sampai 3 tombol navigasi (back / home / recents) yang beneran fungsional.</p></article>
+              <article class="build-card reveal"><i class="fa-solid fa-magnifying-glass"></i><span class="card-label">SPOTLIGHT SEARCH</span><h3>Satu pencarian buat segalanya.</h3><p>Command palette yang nyariin aplikasi, tab pengaturan, plugin, path di file manager, hasil kalkulator instan, sampai fallback ke web search—semua dari satu input.</p></article>
+            </div>
+            <div class="build-aside">
+              <article class="build-card reveal"><i class="fa-solid fa-database"></i><span class="card-label">STORAGE SCANNER</span><h3>Bisa lihat isi "otak" OS-nya sendiri.</h3><p>Scan localStorage dan IndexedDB, tampilin apa aja yang kesimpen di sana, lengkap sama opsi buat nuke semua data kalau OS-nya mau di-reset total.</p></article>
+              <article class="build-card reveal"><i class="fa-solid fa-language"></i><span class="card-label">14 BAHASA UI</span><h3>Nama aplikasi ikut ganti bahasa, bukan cuma label.</h3><p>ID, EN, JA, KO, ZH, AR, FR, DE, ES, PT, RU, HI, TR, TH—lengkap sama versi nama yang berubah kalau Mode Wibu ikut dinyalain.</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="case-study">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">RECRUITER VIEW / 02</span>
+            <h2 class="section-title">Satu contoh cara gw mikir saat membangun fitur.</h2>
+            <p class="section-copy">Case study singkat ini menunjukkan bukan cuma apa yang dibuat, tetapi juga alasan di balik arsitekturnya.</p>
+          </header>
+          <div class="case-grid">
+            <article class="case-panel reveal">
+              <h3>Filesystem dari desktop shell</h3>
+              <div class="case-step"><b>01 · Masalah</b><p>Renderer browser tidak boleh diberi akses Node.js dan filesystem secara langsung karena itu memperbesar risiko keamanan.</p></div>
+              <div class="case-step"><b>02 · Solusi</b><p>Akhtar OS memisahkan main process, preload, dan renderer. API yang dibutuhkan diekspos secara terbatas melalui bridge/IPC.</p></div>
+              <div class="case-step"><b>03 · Hasil</b><p>File Manager dan fitur File Access dapat berkomunikasi dengan runtime desktop tanpa menjadikan seluruh renderer punya akses sistem.</p></div>
+              <div class="case-step"><b>04 · Pelajaran</b><p>Fitur yang terlihat sederhana ternyata memaksa gw memahami trust boundary, permission, async flow, dan error handling.</p></div>
+            </article>
+            <article class="case-code reveal" aria-label="Diagram arsitektur filesystem Akhtar OS">
+              <pre><span class="blue">renderer</span>  →  <span class="accent">preload bridge</span>  →  <span class="amber">IPC channel</span>  →  <span class="blue">main process</span>
+   │              │                 │                 │
+   │  user action │  allowlisted    │  validate       │  filesystem
+   │  + state     │  API only       │  payload        │  operation
+   │              │                 │                 │
+   └──────────────┴─────────────────┴─────────────────┴──→ result / error
+
+<span class="accent">design goal:</span> minimum privilege, visible failure, predictable state
+<span class="accent">next step:</span> stronger validation, tests, and signed desktop releases</pre>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="hardware">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">CATATAN BUILD / 04</span>
+            <h2 class="section-title">Yang paling bikin gw penasaran: seberapa jauh browser bisa nyentuh hardware?</h2>
+            <p class="section-copy">Di build browser, gw nyoba Web API yang bisa minta izin lalu komunikasi ke perangkat fisik. Di jalur desktop, eksperimennya lanjut ke filesystem, terminal, browser berbasis WebContentsView, dan Wi-Fi scanner.</p>
+          </header>
+          <div class="hardware-layout">
+            <div class="hardware-list reveal">
+              <div class="hardware-row"><i class="fa-solid fa-usb"></i><div><b>USB Manager</b><small>Deteksi dan kelola perangkat fisik lewat WebUSB.</small></div><span class="tag">WebUSB</span></div>
+              <div class="hardware-row"><i class="fa-brands fa-bluetooth-b"></i><div><b>Bluetooth</b><small>Scan serta pairing perangkat nirkabel dari browser.</small></div><span class="tag">WebBluetooth</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-microchip"></i><div><b>Serial + Arduino IDE</b><small>Eksperimen akses serial untuk board dan sketch.</small></div><span class="tag">WebSerial</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-keyboard"></i><div><b>HID Device</b><small>Baca input dari perangkat human-interface yang didukung.</small></div><span class="tag">WebHID</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-music"></i><div><b>MIDI Piano</b><small>Sambungkan keyboard MIDI ke aplikasi piano.</small></div><span class="tag">Web MIDI</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-gamepad"></i><div><b>Gamepad</b><small>Deteksi controller dan dukung getaran bila tersedia.</small></div><span class="tag">Gamepad</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-wifi"></i><div><b>Wi-Fi Scanner</b><small>Eksperimen pemindaian jaringan pada desktop runtime.</small></div><span class="tag">DESKTOP</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-wifi"></i><div><b>NFC Reader</b><small>Baca tag NFC terdekat lewat Web NFC.</small></div><span class="tag">WebNFC</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-tv"></i><div><b>Cast to TV</b><small>Lempar tampilan ke layar lain lewat Presentation API.</small></div><span class="tag">Presentation</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-lock"></i><div><b>Wake Lock</b><small>Jaga layar tetap nyala selama sesi tertentu berjalan.</small></div><span class="tag">Wake Lock</span></div>
+              <div class="hardware-row"><i class="fa-solid fa-share-nodes"></i><div><b>Share Center</b><small>Kirim teks, link, atau file lewat share sheet perangkat.</small></div><span class="tag">Web Share</span></div>
+            </div>
+            <article class="hardware-card reveal">
+              <h3>Izin dulu.<br />Baru gw coba satu-satu.</h3>
+              <p>Web API nggak langsung ngasih akses sembarangan, dan itu justru bagian yang seru buat dipelajari. Gw harus request permission, cek perangkatnya didukung atau nggak, nunjukkin status, terus tangani kalau koneksinya berubah.</p>
+              <div class="terminal-snippet"><div><span class="command">$</span> navigator.<span class="api">serial</span>.requestPort()</div><div><span class="output">›</span> menunggu izin pengguna...</div><div><span class="command">$</span> navigator.<span class="api">bluetooth</span>.requestDevice()</div><div><span class="output">›</span> perangkat siap dipilih</div><div><span class="command">$</span> system.<span class="api">scanWifi</span>()</div><div><span class="output">›</span> desktop runtime: siap eksperimen</div></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="modes">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">CATATAN BUILD / 05</span>
+            <h2 class="section-title">Lagi ngoprek serius bukan berarti nggak boleh ada Mode Wibu.</h2>
+            <p class="section-copy">Beberapa mode ini memang gw masukin karena seru buat dicoba. Selain ngubah warna, idenya juga buat nguji sampai mana satu tema bisa ngubah rasa dari seluruh interface.</p>
+          </header>
+          <div class="modes reveal">
+            <div>
+              <div class="mode-row"><div><b>Mode Wibu</b><span>Tema pink-ungu, sapaan anime, dan karakter UI yang lebih playful.</span></div><button class="switch" id="wibuSwitch" aria-label="Aktifkan Mode Wibu" aria-pressed="false"></button></div>
+              <div class="mode-row"><div><b>Mode Indonesia</b><span>Label dan nama aplikasi dibuat akrab buat pengguna lokal.</span></div><button class="switch aux-switch" data-mode="Indonesia" aria-label="Aktifkan Mode Indonesia" aria-pressed="false"></button></div>
+              <div class="mode-row"><div><b>Car Mode</b><span>Konsep tampilan besar dan lebih simpel buat dashboard mobil.</span></div><button class="switch aux-switch" data-mode="Car" aria-label="Aktifkan Car Mode" aria-pressed="false"></button></div>
+              <div class="mode-row"><div><b>Night Light</b><span>Filter hangat otomatis buat eksperimen kenyamanan mata saat malam.</span></div><button class="switch aux-switch" data-mode="Night Light" aria-label="Aktifkan Night Light" aria-pressed="false"></button></div>
+            </div>
+            <div class="mode-preview" id="modePreview">
+              <i class="fa-solid fa-desktop" id="modeIcon"></i>
+              <p class="quote" id="modeQuote">Coba aktifkan Mode Wibu di samping. Portofolio ini ikut ganti warna seperti OS aslinya.</p>
+              <span class="mode-name" id="modeName">MODE: DEFAULT</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="timeline">
+        <div class="shell">
+          <header class="section-head reveal">
+            <span class="section-kicker">CATATAN BUILD / 06</span>
+            <h2 class="section-title">Catatan progres Akhtar OS sampai sekarang.</h2>
+            <p class="section-copy">Ini bukan produk final dan gw juga nggak mau pura-pura udah selesai. Ini cuma urutan hal yang sudah gw coba, dari prototype browser sampai environment desktop yang bisa dijalankan di VirtualBox.</p>
+          </header>
+          <div class="timeline">
+            <article class="roadmap-card reveal"><span class="phase">PHASE 01 · BROWSER PROTOTYPE</span><h3>Dimulai dari satu file HTML.</h3><p>Gw masukin boot screen, login, virtual desktop, aplikasi internal, Web API, dan mode mobile sambil belajar gimana desktop bisa disimulasikan di browser.</p><span class="tag">VANILLA JS</span></article>
+            <article class="roadmap-card reveal"><span class="phase">PHASE 02 · DESKTOP RUNTIME</span><h3>Nyoba Electron di VirtualBox.</h3><p>Di sini gw mulai pakai main process dan preload buat browser WebContentsView, akses filesystem, terminal, login, dan pemindaian Wi-Fi.</p><span class="tag">ELECTRON</span></article>
+            <article class="roadmap-card reveal"><span class="phase">PHASE 03 · SYSTEM LAB</span><h3>Masih pengen ngerti fondasinya.</h3><p>Selanjutnya gw pengen lebih dalem belajar Linux, C++, Node.js, Tauri, keamanan, proses, dan bedanya desktop shell dengan operating system sungguhan.</p><span class="tag">NEXT EXPERIMENT</span></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="stack">
+        <div class="shell stack-layout">
+          <header class="section-head reveal" style="margin-bottom:0">
+            <span class="section-kicker">CATATAN BUILD / 07</span>
+            <h2 class="section-title">Yang gw kejar bukan cuma bisa pakai tools-nya, tapi ngerti dalemnya.</h2>
+            <p class="section-copy">Stack-nya bisa berubah-ubah. Kadang gw coba sendiri, kadang rusak dulu, lalu gw bongkar lagi sampai paham kenapa hasilnya begitu.</p>
+          </header>
+          <div class="reveal">
+            <div class="stack-cloud" aria-label="Technology stack">
+              <span class="stack-chip"><i class="fa-brands fa-html5"></i>HTML5</span><span class="stack-chip"><i class="fa-brands fa-css3-alt"></i>CSS</span><span class="stack-chip"><i class="fa-brands fa-js"></i>Vanilla JS</span><span class="stack-chip"><i class="fa-brands fa-node-js"></i>Node.js</span><span class="stack-chip"><i class="fa-solid fa-atom"></i>Electron</span><span class="stack-chip"><i class="fa-solid fa-cube"></i>VirtualBox</span><span class="stack-chip"><i class="fa-solid fa-terminal"></i>Terminal</span><span class="stack-chip"><i class="fa-solid fa-folder-tree"></i>Filesystem</span><span class="stack-chip"><i class="fa-solid fa-window-maximize"></i>WebContentsView</span><span class="stack-chip"><i class="fa-solid fa-database"></i>IndexedDB</span><span class="stack-chip"><i class="fa-solid fa-plug"></i>Web APIs</span><span class="stack-chip"><i class="fa-brands fa-linux"></i>Linux Learning</span><span class="stack-chip"><i class="fa-solid fa-code"></i>C++ Exploration</span><span class="stack-chip"><i class="fa-solid fa-bolt"></i>Tauri Curious</span>
+            </div>
+            <blockquote class="stack-note">"Gw nggak lagi bikin pengganti Windows atau Linux. Gw bikin tempat sendiri buat belajar kenapa desktop, terminal, file, dan aplikasi bisa jalan seperti sekarang."<span class="mono">— CATATAN PRIBADI AKHTAR OS</span></blockquote>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="contact">
+        <div class="shell">
+          <div class="recruiter-panel reveal">
+            <div>
+              <span class="section-kicker">RECRUITER VIEW / 03</span>
+              <h2>Project yang bisa langsung dilihat, diuji, dan dibongkar.</h2>
+              <p>Akhtar OS masih terus berkembang, tetapi build ini sudah bisa jadi bukti cara gw belajar desktop runtime, UI state, permission, dan integrasi hardware. Live demo cocok untuk lihat hasilnya; installer cocok untuk menguji build Windows-nya.</p>
+              <div class="recruiter-meta"><span>WINDOWS BUILD · ~93 MB</span><span>ELECTRON DESKTOP RUNTIME</span><span>PERSONAL PROJECT · 2026</span></div>
+            </div>
+            <div class="recruiter-actions">
+              <button class="button primary" id="copyBrief"><i class="fa-solid fa-copy"></i> Copy project brief</button>
+              <button class="button ghost" id="launchDemoRecruiter"><i class="fa-solid fa-play"></i> Buka live demo</button>
+              <a class="button ghost" href="https://www.mediafire.com/file/s6vxd7zeudfyibw/Akhtar_OS_Setup_1.0.0.exe/file" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Installer <span class="button-note">~93 MB</span></a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="closing" id="launch">
+        <span class="eyebrow mono"><i class="fa-solid fa-power-off"></i> READY FOR BOOT</span>
+        <h2>Masih banyak yang pengen gw bongkar.</h2>
+        <p>Akhtar OS itu catatan dari hal-hal yang lagi gw pelajari: dari antarmuka browser, window manager, sampai desktop runtime yang bisa gw jalanin lewat VirtualBox.</p>
+        <div class="hero-actions" style="justify-content:center;margin-bottom:0"><button class="button primary" id="launchDemoBottom"><i class="fa-solid fa-play"></i> Buka preview desktop</button><a class="button ghost" href="https://drive.google.com/file/d/1O74Na5oMw4_JAdoF3feL-x6M7-9rrikS/view?usp=sharing" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Coba build browser</a><a class="button ghost" href="https://www.mediafire.com/file/s6vxd7zeudfyibw/Akhtar_OS_Setup_1.0.0.exe/file" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Download installer Windows <span class="button-note">~93 MB</span></a></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Akhtar OS — dirancang, dibongkar, dan dibangun oleh Akhtar.</span>
+      <span class="mono">PERSONAL SYSTEM LAB · 2026</span>
+    </footer>
+
+    <div class="demo-modal" id="demoModal" role="dialog" aria-modal="true" aria-labelledby="demoTitle">
+      <section class="demo-shell">
+        <header class="demo-topbar"><i class="window-dot"></i><i class="window-dot"></i><i class="window-dot"></i><b id="demoTitle">AKHTAR OS</b><span>live preview</span><a class="open-external" href="https://super-bird-22af.akhtarnurakhtarnur.workers.dev/" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> tab baru</a><button class="close-demo" id="closeDemo" aria-label="Tutup preview"><i class="fa-solid fa-xmark"></i></button></header>
+        <div class="demo-desktop">
+          <iframe class="demo-frame" id="demoFrame" title="Live preview Akhtar OS" src="about:blank" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen"></iframe>
+        </div>
+      </section>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      (() => {
+        /* ===== BOOT GATE SEQUENCE ===== */
+        (() => {
+          const gate = document.getElementById("bootGate");
+          const logEl = document.getElementById("bootGateLog");
+          const fillEl = document.getElementById("bootGateFill");
+          const percentEl = document.getElementById("bootGatePercent");
+          const skipBtn = document.getElementById("bootGateSkip");
+          const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+          const stages = [
+            { percent: 20, duration: 4800, html: '<span class="ok">[ OK ]</span> menghubungkan ke <span class="path">akhtar-os://core</span> …' },
+            { percent: 40, duration: 4800, html: '<span class="ok">[ OK ]</span> memindai <span class="path">103+ modul & aplikasi</span> terpasang …' },
+            { percent: 60, duration: 4800, html: '<span class="ok">[ OK ]</span> memuat driver hardware — WiFi Manager, DNS Shield, Bluetooth …' },
+            { percent: 80, duration: 4800, html: '<span class="ok">[ OK ]</span> merender tema visual & window manager …' },
+            { percent: 100, duration: 4800, html: '<span class="ok">[ OK ]</span> verifikasi identitas developer — <span class="grant">AKHTAR // ACCESS GRANTED</span>' },
+          ];
+          const TOTAL_MS = stages.reduce((sum, s) => sum + s.duration, 0); // 24000ms
+
+          let cancelled = false;
+          const timeouts = [];
+          const later = (fn, ms) => { const id = setTimeout(fn, ms); timeouts.push(id); return id; };
+
+          const typeInto = (lineEl, html, speed) => new Promise((resolve) => {
+            const temp = document.createElement("div");
+            temp.innerHTML = html;
+            const fullText = temp.textContent;
+            const caret = document.createElement("span");
+            caret.className = "boot-caret";
+            lineEl.appendChild(caret);
+            let visibleChars = 0;
+            const step = () => {
+              if (cancelled) return resolve();
+              visibleChars++;
+              const ratio = visibleChars / fullText.length;
+              lineEl.innerHTML = html.length && ratio >= 1 ? html : fullText.slice(0, visibleChars);
+              lineEl.appendChild(caret);
+              if (visibleChars < fullText.length) {
+                later(step, speed);
+              } else {
+                caret.remove();
+                resolve();
+              }
+            };
+            fullText.length ? step() : resolve();
+          });
+
+          const runStage = async (stage) => {
+            const line = document.createElement("div");
+            line.className = "boot-gate-line";
+            logEl.appendChild(line);
+            logEl.scrollTop = logEl.scrollHeight;
+            const typeBudget = Math.max(stage.duration * 0.55, 300);
+            const plainLen = stage.html.replace(/<[^>]+>/g, "").length || 1;
+            const speed = Math.max(typeBudget / plainLen, 8);
+            await typeInto(line, stage.html, speed);
+            fillEl.style.width = stage.percent + "%";
+            percentEl.textContent = stage.percent + "%";
+            const remaining = stage.duration - typeBudget;
+            if (remaining > 0) await new Promise((resolve) => later(resolve, remaining));
+          };
+
+          const revealSite = () => {
+            document.body.classList.remove("boot-locked");
+            gate.classList.add("boot-gate-hide");
+            later(() => { gate.style.display = "none"; }, 650);
+          };
+
+          const skip = () => {
+            if (cancelled) return;
+            cancelled = true;
+            timeouts.forEach(clearTimeout);
+            fillEl.style.width = "100%";
+            percentEl.textContent = "100%";
+            revealSite();
+          };
+          skipBtn.addEventListener("click", skip);
+
+          const runAll = async () => {
+            for (const stage of stages) {
+              if (cancelled) return;
+              await runStage(stage);
+            }
+            if (!cancelled) later(revealSite, 200);
+          };
+
+          if (reduceMotion) {
+            skip();
+          } else {
+            runAll();
+          }
+        })();
+
+        const apps = [["fa-folder-open", "File Manager", "produktif"], ["fa-hard-drive", "Files (Nyata)", "produktif"], ["fa-play", "EXE Runner", "sistem"], ["fa-terminal", "Terminal", "sistem"], ["fa-globe", "Easy Browser", "jaringan"], ["fa-map", "Easy Map", "jaringan"], ["fa-film", "Video Editor", "kreatif"], ["fa-keyboard", "HackerTyper", "hiburan"], ["fa-gamepad", "Chess", "hiburan"], ["fa-gamepad", "Othello Reversi", "hiburan"], ["fa-gamepad", "Checkers", "hiburan"], ["fa-gamepad", "Word Puzzle", "hiburan"], ["fa-gamepad", "Falling Cubes", "hiburan"], ["fa-gamepad", "Solitaire", "hiburan"], ["fa-gamepad", "Sudoku", "hiburan"], ["fa-gamepad", "Drift King", "hiburan"], ["fa-gamepad", "Stack Fire Ball", "hiburan"], ["fa-gamepad", "GTA Simulator", "hiburan"], ["fa-gamepad", "Real Flight Sim", "hiburan"], ["fa-gamepad", "Masked Forces", "hiburan"], ["fa-gamepad", "Madalin Stunt Cars", "hiburan"], ["fa-gamepad", "Stickman GTA City", "hiburan"], ["fa-gamepad", "Stickman Parkour", "hiburan"], ["fa-gamepad", "Backflip Challenge", "hiburan"], ["fa-gamepad", "Checkout Frenzy", "hiburan"], ["fa-gamepad", "Drift Hunters Pro", "hiburan"], ["fa-gamepad", "Dublix", "hiburan"], ["fa-gamepad", "Get On Top", "hiburan"], ["fa-gamepad", "Edys Car Simulator", "hiburan"], ["fa-gamepad", "Guerrillas.io", "hiburan"], ["fa-gamepad", "CS Online", "hiburan"], ["fa-gamepad", "Pixelmon Town", "hiburan"], ["fa-gamepad", "Escape Car", "hiburan"], ["fa-gamepad", "99 Nights Forest", "hiburan"], ["fa-gamepad", "Basket Hoop", "hiburan"], ["fa-gamepad", "Capybara Clicker", "hiburan"], ["fa-gamepad", "Burnout City", "hiburan"], ["fa-gamepad", "Basketball.io", "hiburan"], ["fa-gamepad", "Game Center", "hiburan"], ["fa-gamepad", "Snake", "hiburan"], ["fa-gamepad", "Flappy Bird", "hiburan"], ["fa-gamepad", "Tetris", "hiburan"], ["fa-gamepad", "Memory Card", "hiburan"], ["fa-gamepad", "Whack-a-Mole", "hiburan"], ["fa-gamepad", "Brick Breaker", "hiburan"], ["fa-gamepad", "2048", "hiburan"], ["fa-gamepad", "Tebak Kata", "hiburan"], ["fa-gamepad", "Reaction Time", "hiburan"], ["fa-gamepad", "Color Match", "hiburan"], ["fa-gamepad", "Number Puzzle", "hiburan"], ["fa-code", "HTML Viewer", "kreatif"], ["fa-book", "Wikipedia", "jaringan"], ["fa-box-archive", "Internet Archive", "jaringan"], ["fa-map-location-dot", "OpenStreetMap", "jaringan"], ["fa-pencil", "Excalidraw", "kreatif"], ["fa-image", "Photopea", "kreatif"], ["fa-cube", "3D Editor", "kreatif"], ["fa-puzzle-piece", "Plugin Store", "sistem"], ["fa-magnifying-glass-chart", "Storage Scanner", "sistem"], ["fa-paintbrush", "Paint", "kreatif"], ["fa-list-check", "Todo List", "produktif"], ["fa-calendar-days", "Kalender", "produktif"], ["fa-right-left", "Konverter", "produktif"], ["fa-hourglass-half", "Pomodoro", "produktif"], ["fa-key", "Password Gen", "produktif"], ["fa-qrcode", "QR Generator", "produktif"], ["fa-chart-line", "System Monitor", "sistem"], ["fa-stopwatch", "Timer", "produktif"], ["fa-calculator", "Kalkulator", "produktif"], ["fa-note-sticky", "Catatan", "produktif"], ["fa-earth-asia", "Slime World", "kreatif"], ["fa-gem", "Slime Aksesori", "kreatif"], ["fa-gear", "Pengaturan", "sistem"], ["fa-list-check", "Task Manager", "produktif"], ["fa-note-sticky", "Stickies", "produktif"], ["fa-clipboard-list", "Clipboard History", "produktif"], ["fa-wand-magic-sparkles", "App Generator", "kreatif"], ["fa-file-shield", "File Access", "produktif"], ["fa-bluetooth-b", "Bluetooth", "hardware"], ["fa-microchip", "Serial Port", "hardware"], ["fa-wifi", "NFC Reader", "hardware"], ["fa-usb", "USB Manager", "hardware"], ["fa-circle-half-stroke", "Auto Theme", "sistem"], ["fa-camera", "Kamera & Senter", "hardware"], ["fa-lock", "Wake Lock", "produktif"], ["fa-barcode", "Barcode Scanner", "hardware"], ["fa-share-nodes", "Share Center", "hardware"], ["fa-network-wired", "Network Info", "jaringan"], ["fa-wifi", "Wi-Fi Manager", "jaringan"], ["fa-shield-halved", "DNS Shield", "jaringan"], ["fa-trash", "Pembuangan App", "produktif"], ["fa-music", "MIDI Piano", "hardware"], ["fa-gamepad", "Gamepad", "hardware"], ["fa-keyboard", "HID Device", "hardware"], ["fa-tower-broadcast", "WebTransport", "hardware"], ["fa-network-wired", "P2P Connect", "jaringan"], ["fa-microchip", "Arduino IDE", "hardware"], ["fa-tv", "Cast to TV", "hardware"], ["fa-robot", "Robot Control", "hardware"], ["fa-headphones", "Music Player", "hiburan"], ["fa-bell", "Alarm", "produktif"], ["fa-clock", "Multi Timer", "produktif"], ["fa-heart-pulse", "Siklus & Kesehatan", "produktif"]];
+        const categoryNames = { all: "Semua modul yang ditampilkan", produktif: "Modul produktivitas", kreatif: "Modul kreatif", sistem: "Modul sistem", hardware: "Modul hardware", hiburan: "Modul hiburan", jaringan: "Modul jaringan" };
+        const grid = document.getElementById("appGrid");
+        const count = document.getElementById("appCount");
+        const renderApps = (category) => {
+          const list = apps.filter((app) => category === "all" || app[2] === category);
+          grid.innerHTML = list.map(([icon, name, type]) => `<article class="app-card"><i class="fa-solid ${icon}"></i><div><b>${name}</b><span>#${type}</span></div></article>`).join("");
+          count.textContent = `${list.length} item ditampilkan · ${categoryNames[category]}`;
+        };
+        renderApps("all");
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.addEventListener("click", () => {
+            document.querySelectorAll(".tab").forEach((button) => { button.classList.remove("active"); button.setAttribute("aria-selected", "false"); });
+            tab.classList.add("active"); tab.setAttribute("aria-selected", "true"); renderApps(tab.dataset.category);
+          });
+        });
+
+        const timeText = () => new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        const tick = () => { document.getElementById("clock").textContent = timeText(); };
+        tick(); setInterval(tick, 30000);
+        document.getElementById("homeButton").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+
+        const bootLines = [
+          '<span class="boot-ok">[ OK ]</span> mount <span class="boot-path">/system/apps</span> (103+ unit)',
+          '<span class="boot-ok">[ OK ]</span> inisialisasi window manager',
+          '<span class="boot-ok">[ OK ]</span> cek modul hardware & permission',
+          '<span class="boot-ok">[ OK ]</span> memuat login: pin / gesture / face',
+          '&nbsp;',
+          '<span style="color:var(--ink)">selamat datang di</span>',
+          '<strong style="font:700 18px Space Grotesk,sans-serif;color:var(--ink);letter-spacing:.02em">AKHTAR OS</strong>',
+          '<span style="color:var(--dim)">system lab aktif</span><i class="cursor"></i>'
+        ];
+        document.getElementById("bootlog").innerHTML = bootLines.map((line, index) => `<div class="bootline" style="animation-delay:${index * .24}s">${line}</div>`).join("");
+
+        const wibu = document.getElementById("wibuSwitch");
+        const modeQuote = document.getElementById("modeQuote");
+        const modeName = document.getElementById("modeName");
+        const modeIcon = document.getElementById("modeIcon");
+        let wibuOn = false;
+        wibu.addEventListener("click", () => {
+          wibuOn = !wibuOn;
+          document.documentElement.dataset.mode = wibuOn ? "wibu" : "";
+          wibu.classList.toggle("on", wibuOn); wibu.setAttribute("aria-pressed", String(wibuOn));
+          modeIcon.className = wibuOn ? "fa-solid fa-wand-sparkles" : "fa-solid fa-desktop";
+          modeQuote.textContent = wibuOn ? "Yatta! Warna sistem berubah—taskbar, panel, dan indikator ikut punya selera anime." : "Mode dimatikan. Sistem balik ke profil warna default.";
+          modeName.textContent = wibuOn ? "MODE: WIBU" : "MODE: DEFAULT";
+        });
+        document.querySelectorAll(".aux-switch").forEach((switcher) => switcher.addEventListener("click", () => {
+          const on = switcher.classList.toggle("on"); switcher.setAttribute("aria-pressed", String(on));
+          modeQuote.textContent = on ? `${switcher.dataset.mode} aktif. Konsep mode ini tersimpan sebagai bagian dari eksperimen interface Akhtar OS.` : `${switcher.dataset.mode} dimatikan.`;
+          modeName.textContent = `MODE: ${on ? switcher.dataset.mode.toUpperCase() : "DEFAULT"}`;
+        }));
+
+        const briefText = "Akhtar OS — experimental desktop environment built with Vanilla JS, Electron, Node.js, WebContentsView, Python runtimes, Supabase, IndexedDB, filesystem APIs, and hardware Web APIs. Featured engineering work: window manager, preload/IPC boundary, multi-engine Python terminal, plugin persistence, and permission-aware hardware experiments.";
+        const showToast = (message) => {
+          const toast = document.getElementById("toast");
+          toast.textContent = message;
+          toast.classList.add("show");
+          window.setTimeout(() => toast.classList.remove("show"), 2200);
+        };
+        document.getElementById("copyBrief")?.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(briefText);
+            showToast("Project brief berhasil disalin.");
+          } catch {
+            showToast("Clipboard tidak tersedia di browser ini.");
+          }
+        });
+
+        const modal = document.getElementById("demoModal");
+        const demoFrame = document.getElementById("demoFrame");
+        const previewUrl = "https://super-bird-22af.akhtarnurakhtarnur.workers.dev/";
+        let lastFocused = null;
+        const openDemo = () => { lastFocused = document.activeElement; demoFrame.src = previewUrl; modal.classList.add("open"); document.body.classList.add("modal-open"); document.getElementById("closeDemo").focus(); };
+        const closeDemo = () => { modal.classList.remove("open"); demoFrame.src = "about:blank"; document.body.classList.remove("modal-open"); lastFocused?.focus(); };
+        document.querySelectorAll("#launchDemo,#launchDemoBottom,#mobileDemo,#launchDemoRecruiter").forEach((button) => button.addEventListener("click", openDemo));
+        document.getElementById("closeDemo").addEventListener("click", closeDemo);
+        modal.addEventListener("click", (event) => { if (event.target === modal) closeDemo(); });
+        document.addEventListener("keydown", (event) => { if (event.key === "Escape" && modal.classList.contains("open")) closeDemo(); });
+
+        const revealObserver = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add("visible"); revealObserver.unobserve(entry.target); } }), { threshold: .1 });
+        document.querySelectorAll(".reveal").forEach((element) => revealObserver.observe(element));
+        const navLinks = [...document.querySelectorAll(".nav-link")];
+        const sectionObserver = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) navLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`)); }), { rootMargin: "-38% 0px -55% 0px" });
+        ["overview", "apps", "system", "hardware", "timeline", "stack", "featured", "case-study", "contact"].forEach((id) => sectionObserver.observe(document.getElementById(id)));
+      })();
+    </script>
+  </body>
+</html>
