@@ -549,10 +549,14 @@ function createTab(url, incognito) {
   });
 
   view.webContents.on('destroyed', () => {
+    spoofScriptIds.delete(tab.id);
     browserTabs = browserTabs.filter((t) => t.id !== tab.id);
   });
 
   browserTabs.push(tab);
+
+  // Tab baru langsung ikutan spoof lokasi/timezone yang lagi aktif (kalau ada).
+  spoofApplyToTab(tab).catch(() => {});
 
   return tab;
 }
@@ -3499,6 +3503,12 @@ app.whenReady().then(async () => {
     }
   );
 
+  // Muat ulang pilihan Geolocation & Time Spoofer dari sesi sebelumnya (kalau
+  // ada), lalu pasang header Accept-Language + timezone override-nya.
+  spoofState = loadSpoofState();
+  spoofRegisterSessionHooks();
+  spoofApplySessionTimezone();
+
   session.defaultSession.setPermissionCheckHandler(
     (webContents, permission) => {
       return permission === 'media';
@@ -4728,4 +4738,1450 @@ ipcMain.handle('share-open-downloads-folder', () => {
   } catch (e) {
     return false;
   }
+});
+
+// ==================================
+// DATA POISONING ENGINE (Racun Data)
+// ==================================
+// Konsep: obfuscation over blocking. Selama aktif, engine ini secara berkala
+// spawn "ghost session" — window hidden dengan fingerprint acak (UA, viewport,
+// bahasa, partition session terpisah) yang jalanin pencarian/browsing random
+// (Google search, Wikipedia random, Reddit random) plus simulasi perilaku
+// manusia (scroll bertahap + klik link acak). Tujuannya bikin noise di profil
+// tracker/data broker, bukan cuma blokir mereka doang.
+//
+// PENTING soal batas fitur ini:
+// - Ini generate traffic browsing biasa (search query + baca halaman publik),
+//   BUKAN request otomatis ke ratusan situs sekaligus / spam / DoS apapun.
+// - Ada rate limiter (jeda antar sesi) supaya traffic-nya tetap masuk akal
+//   dan gak membebani situs target atau jaringan user.
+// - Cuma jalan kalau user nyalain manual (atau auto-follow Incognito kalau
+//   diaktifkan dari UI) — gak pernah jalan diam-diam di background tanpa toggle.
+
+const POISON_QUERY_POOLS = {
+  kuliner: {
+    lang: 'id',
+    items: [
+      'resep kue kering lebaran', 'cara bikin mie ayam rumahan', 'resep sambal matah',
+      'rekomendasi kopi enak dekat sini', 'cara masak rendang empuk', 'resep bolu kukus mekar',
+      'menu buka puasa praktis', 'cara bikin cireng renyah', 'resep ayam geprek sambal bawang',
+      'kedai kopi estetik buat nongkrong'
+    ]
+  },
+  belanja: {
+    lang: 'id',
+    items: [
+      'sepatu lari terbaik 2026', 'jaket winter murah', 'promo skincare hari ini',
+      'tas ransel kantor pria', 'review sepatu lari trail', 'jam tangan otomatis budget',
+      'baju kondangan simple', 'headset gaming murah bagus', 'kursi kerja ergonomis harga terjangkau'
+    ]
+  },
+  otomotif: {
+    lang: 'id',
+    items: [
+      'harga motor matic bekas', 'perbandingan mobil city car', 'cara ganti oli sendiri',
+      'servis rutin motor berapa km', 'mobil listrik murah 2026', 'ban motor awet buat harian'
+    ]
+  },
+  kesehatan: {
+    lang: 'id',
+    items: [
+      'cara tidur nyenyak', 'manfaat jalan pagi', 'menu diet sehat mingguan',
+      'vitamin buat daya tahan tubuh', 'cara mengurangi stres kerja', 'olahraga ringan di rumah'
+    ]
+  },
+  properti: {
+    lang: 'id',
+    items: [
+      'rumah dijual dekat stasiun', 'tips kredit rumah pertama', 'kos murah dekat kampus',
+      'renovasi dapur minimalis budget kecil', 'apartemen sewa bulanan'
+    ]
+  },
+  hiburan_id: {
+    lang: 'id',
+    items: [
+      'rekomendasi film weekend ini', 'lagu galau enak didengar', 'drakor terbaru worth it',
+      'buku fiksi ringan buat pemula', 'podcast santai buat perjalanan'
+    ]
+  },
+  longtail_id: {
+    lang: 'id',
+    items: [
+      'kenapa kucing muntah setelah makan', 'kenapa laptop cepat panas',
+      'apa itu asuransi jiwa unit link', 'berapa lama air rebus mendidih',
+      'kenapa tanaman cabai daunnya kuning', 'cara mengatasi insomnia ringan',
+      'apa bedanya yoga dan pilates', 'kenapa mata cepat lelah di depan layar'
+    ]
+  },
+  shopping_en: {
+    lang: 'en',
+    items: [
+      'best running shoes 2026', 'cheap winter jacket deals', 'ergonomic office chair budget',
+      'wireless headphones under 100', 'weekend outfit ideas', 'best backpack for commuting',
+      'affordable smartwatch reviews'
+    ]
+  },
+  lifestyle_en: {
+    lang: 'en',
+    items: [
+      'how to sleep better at night', 'easy meal prep ideas', 'benefits of morning walk',
+      'how to reduce work stress', 'best budget travel destinations', 'simple home workout routine'
+    ]
+  },
+  longtail_en: {
+    lang: 'en',
+    items: [
+      'why does my cat throw up after eating', 'why is my laptop overheating',
+      'how long does it take to boil an egg', 'why do plant leaves turn yellow',
+      'difference between yoga and pilates', 'how to fix dry skin in winter'
+    ]
+  },
+  culinaria_es: {
+    lang: 'es',
+    items: [
+      'receta de tacos faciles', 'mejores cafeterias cerca de mi', 'como hacer pan casero',
+      'menu saludable para la semana', 'receta de paella rapida'
+    ]
+  },
+  compras_es: {
+    lang: 'es',
+    items: [
+      'zapatillas para correr baratas', 'chaqueta de invierno oferta', 'silla de oficina ergonomica'
+    ]
+  },
+  vida_pt: {
+    lang: 'pt',
+    items: [
+      'receita de bolo simples', 'como dormir melhor a noite', 'tenis para corrida barato',
+      'dicas para reduzir o estresse', 'melhores destinos de viagem economicos'
+    ]
+  },
+  leben_de: {
+    lang: 'de',
+    items: [
+      'gunstige laufschuhe test', 'einfaches rezept fur abendessen', 'wie schlaft man besser',
+      'buro stuhl ergonomisch gunstig'
+    ]
+  },
+  vie_fr: {
+    lang: 'fr',
+    items: [
+      'recette facile pour ce soir', 'meilleures chaussures de course pas cher',
+      'comment mieux dormir la nuit', 'chaise de bureau ergonomique pas cher'
+    ]
+  },
+  seikatsu_ja: {
+    lang: 'ja',
+    items: [
+      'おすすめ ランニングシューズ 安い', '簡単 夕食 レシピ', 'よく眠る方法',
+      '在宅ワーク 椅子 おすすめ'
+    ]
+  },
+  saeng_ko: {
+    lang: 'ko',
+    items: [
+      '저렴한 러닝화 추천', '간단한 저녁 레시피', '잠 잘 자는 방법', '재택근무 의자 추천'
+    ]
+  }
+};
+
+// ---- QUERY GENERATOR: prefix + topik + suffix, dikombinasikan otomatis ----
+// Puluhan template di bawah ini menghasilkan RIBUAN kombinasi query berbeda
+// (bukan cuma ~150 string statis), jadi engine gak keulang-ulang query yang
+// sama persis kalau dijalanin berhari-hari. Hasilnya digabung ke POISON_QUERY_POOLS
+// di bawah dengan key 'generated_<lang>'.
+const POISON_QUERY_TEMPLATES = {
+  id: [
+    { prefixes: ['cara bikin', 'resep', 'tips bikin', 'cara masak', 'resep simpel'],
+      topics: ['nasi goreng', 'ayam bakar', 'mie goreng', 'kue coklat', 'roti tawar', 'sup ayam', 'pizza rumahan', 'martabak manis', 'telur dadar', 'sate ayam'],
+      suffixes: ['yang enak', 'yang mudah', 'ala restoran', 'buat pemula', 'anti gagal', ''] },
+    { prefixes: ['review', 'harga', 'perbandingan', 'rekomendasi', 'spek'],
+      topics: ['laptop gaming', 'hp murah', 'sepeda lipat', 'kamera mirrorless', 'powerbank', 'earphone bluetooth', 'kipas angin', 'rice cooker', 'router wifi', 'monitor gaming'],
+      suffixes: ['2026', 'terbaik', 'budget pelajar', 'worth it', 'murah', ''] },
+    { prefixes: ['kenapa', 'apa penyebab', 'cara mengatasi', 'kapan harus periksa'],
+      topics: ['badan gampang capek', 'susah tidur', 'sakit kepala terus', 'nafsu makan turun', 'jerawat gak hilang', 'rambut rontok'],
+      suffixes: ['padahal udah istirahat', 'secara alami', 'tanpa obat', ''] },
+    { prefixes: ['itinerary', 'rekomendasi wisata', 'tempat healing', 'liburan murah'],
+      topics: ['Bandung', 'Yogyakarta', 'Bali', 'Malang', 'Lombok', 'Bromo'],
+      suffixes: ['3 hari 2 malam', 'buat keluarga', 'anti mainstream', 'budget pas-pasan', ''] }
+  ],
+  en: [
+    { prefixes: ['how to make', 'best recipe for', 'quick recipe', 'easy way to cook'],
+      topics: ['banana bread', 'grilled chicken', 'pasta sauce', 'pancakes', 'stir fry', 'homemade pizza', 'chicken soup', 'fried rice'],
+      suffixes: ['for beginners', 'that actually works', 'in under 30 minutes', 'from scratch', ''] },
+    { prefixes: ['best', 'cheap', 'review of', 'comparison of'],
+      topics: ['noise cancelling headphones', 'gaming laptop', 'budget smartphone', 'office chair', 'electric kettle', 'fitness tracker', 'coffee maker', 'wireless mouse'],
+      suffixes: ['2026', 'under 100 dollars', 'for students', 'worth buying', ''] },
+    { prefixes: ['why do i', 'how to stop', 'what causes', 'when should i see a doctor for'],
+      topics: ['feel tired all the time', 'get headaches so often', 'have trouble sleeping', 'lose motivation at work', 'crave sugar so much'],
+      suffixes: ['naturally', 'without medication', 'quickly', ''] },
+    { prefixes: ['best itinerary for', 'weekend trip to', 'cheap travel guide to', 'things to do in'],
+      topics: ['Bali', 'Tokyo', 'Lisbon', 'Bangkok', 'New York', 'Seoul'],
+      suffixes: ['3 days', 'on a budget', 'for couples', 'with kids', ''] }
+  ]
+};
+
+function poisonExpandTemplates(lang) {
+  const groups = POISON_QUERY_TEMPLATES[lang] || [];
+  const out = [];
+  groups.forEach((g) => {
+    g.prefixes.forEach((p) => {
+      g.topics.forEach((t) => {
+        g.suffixes.forEach((s) => {
+          out.push([p, t, s].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim());
+        });
+      });
+    });
+  });
+  return out;
+}
+
+// Gabungin hasil generator ke pool utama sekali aja pas module di-load.
+Object.keys(POISON_QUERY_TEMPLATES).forEach((lang) => {
+  const generated = poisonExpandTemplates(lang);
+  if (generated.length) {
+    POISON_QUERY_POOLS['generated_' + lang] = { lang, items: generated };
+  }
+});
+
+// ---- TARGET SITES DILUAR SEARCH ENGINE: e-commerce & berita lokal ----
+// Bukan 400 domain hardcoded (itu berat dimaintain — tiap situs punya popup
+// consent/layout beda yang gampang bikin sesi "gagal" bukan "poisoning").
+// Ini set yang solid per bahasa/region dan gampang ditambahin baris baru.
+const POISON_ECOMMERCE_SITES = {
+  id: [
+    { domain: 'tokopedia.com', build: (q) => 'https://www.tokopedia.com/search?q=' + encodeURIComponent(q) },
+    { domain: 'shopee.co.id', build: (q) => 'https://shopee.co.id/search?keyword=' + encodeURIComponent(q) },
+    { domain: 'bukalapak.com', build: (q) => 'https://www.bukalapak.com/products?search%5Bkeywords%5D=' + encodeURIComponent(q) },
+    { domain: 'blibli.com', build: (q) => 'https://www.blibli.com/cari/' + encodeURIComponent(q) },
+    { domain: 'lazada.co.id', build: (q) => 'https://www.lazada.co.id/catalog/?q=' + encodeURIComponent(q) },
+    { domain: 'zalora.co.id', build: (q) => 'https://www.zalora.co.id/search/?q=' + encodeURIComponent(q) }
+  ],
+  en: [
+    { domain: 'amazon.com', build: (q) => 'https://www.amazon.com/s?k=' + encodeURIComponent(q) },
+    { domain: 'ebay.com', build: (q) => 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(q) },
+    { domain: 'etsy.com', build: (q) => 'https://www.etsy.com/search?q=' + encodeURIComponent(q) },
+    { domain: 'walmart.com', build: (q) => 'https://www.walmart.com/search?q=' + encodeURIComponent(q) },
+    { domain: 'target.com', build: (q) => 'https://www.target.com/s?searchTerm=' + encodeURIComponent(q) },
+    { domain: 'bestbuy.com', build: (q) => 'https://www.bestbuy.com/site/searchpage.jsp?st=' + encodeURIComponent(q) },
+    { domain: 'aliexpress.com', build: (q) => 'https://www.aliexpress.com/wholesale?SearchText=' + encodeURIComponent(q) }
+  ],
+  es: [
+    { domain: 'amazon.com.mx', build: (q) => 'https://www.amazon.com.mx/s?k=' + encodeURIComponent(q) },
+    { domain: 'mercadolibre.com.mx', build: (q) => 'https://listado.mercadolibre.com.mx/' + encodeURIComponent(q) },
+    { domain: 'elcorteingles.es', build: (q) => 'https://www.elcorteingles.es/search/?s=' + encodeURIComponent(q) }
+  ],
+  pt: [
+    { domain: 'amazon.com.br', build: (q) => 'https://www.amazon.com.br/s?k=' + encodeURIComponent(q) },
+    { domain: 'mercadolivre.com.br', build: (q) => 'https://lista.mercadolivre.com.br/' + encodeURIComponent(q) },
+    { domain: 'magazineluiza.com.br', build: (q) => 'https://www.magazineluiza.com.br/busca/' + encodeURIComponent(q) }
+  ],
+  de: [
+    { domain: 'amazon.de', build: (q) => 'https://www.amazon.de/s?k=' + encodeURIComponent(q) },
+    { domain: 'otto.de', build: (q) => 'https://www.otto.de/suche/' + encodeURIComponent(q) },
+    { domain: 'mediamarkt.de', build: (q) => 'https://www.mediamarkt.de/de/search.html?query=' + encodeURIComponent(q) }
+  ],
+  fr: [
+    { domain: 'amazon.fr', build: (q) => 'https://www.amazon.fr/s?k=' + encodeURIComponent(q) },
+    { domain: 'cdiscount.com', build: (q) => 'https://www.cdiscount.com/search/10/' + encodeURIComponent(q) + '.html' },
+    { domain: 'fnac.com', build: (q) => 'https://www.fnac.com/SearchResult/ResultList.aspx?Search=' + encodeURIComponent(q) }
+  ],
+  ja: [
+    { domain: 'amazon.co.jp', build: (q) => 'https://www.amazon.co.jp/s?k=' + encodeURIComponent(q) },
+    { domain: 'rakuten.co.jp', build: (q) => 'https://search.rakuten.co.jp/search/mall/' + encodeURIComponent(q) + '/' }
+  ],
+  ko: [
+    { domain: 'coupang.com', build: (q) => 'https://www.coupang.com/np/search?component=&q=' + encodeURIComponent(q) },
+    { domain: '11st.co.kr', build: (q) => 'https://search.11st.co.kr/Search.tmall?kwd=' + encodeURIComponent(q) }
+  ]
+};
+
+const POISON_NEWS_SITES = {
+  id: [
+    { domain: 'detik.com', url: 'https://www.detik.com/' },
+    { domain: 'kompas.com', url: 'https://www.kompas.com/' },
+    { domain: 'cnnindonesia.com', url: 'https://www.cnnindonesia.com/' },
+    { domain: 'tempo.co', url: 'https://www.tempo.co/' },
+    { domain: 'tribunnews.com', url: 'https://www.tribunnews.com/' },
+    { domain: 'liputan6.com', url: 'https://www.liputan6.com/' },
+    { domain: 'republika.co.id', url: 'https://www.republika.co.id/' },
+    { domain: 'antaranews.com', url: 'https://www.antaranews.com/' }
+  ],
+  en: [
+    { domain: 'bbc.com', url: 'https://www.bbc.com/news' },
+    { domain: 'reuters.com', url: 'https://www.reuters.com/' },
+    { domain: 'apnews.com', url: 'https://apnews.com/' },
+    { domain: 'npr.org', url: 'https://www.npr.org/sections/news/' },
+    { domain: 'theguardian.com', url: 'https://www.theguardian.com/international' },
+    { domain: 'cnbc.com', url: 'https://www.cnbc.com/world/' },
+    { domain: 'aljazeera.com', url: 'https://www.aljazeera.com/' }
+  ],
+  es: [
+    { domain: 'elpais.com', url: 'https://elpais.com/' },
+    { domain: 'elmundo.es', url: 'https://www.elmundo.es/' },
+    { domain: 'clarin.com', url: 'https://www.clarin.com/' }
+  ],
+  pt: [
+    { domain: 'g1.globo.com', url: 'https://g1.globo.com/' },
+    { domain: 'uol.com.br', url: 'https://www.uol.com.br/' },
+    { domain: 'estadao.com.br', url: 'https://www.estadao.com.br/' }
+  ],
+  de: [
+    { domain: 'tagesschau.de', url: 'https://www.tagesschau.de/' },
+    { domain: 'spiegel.de', url: 'https://www.spiegel.de/' },
+    { domain: 'zeit.de', url: 'https://www.zeit.de/index' }
+  ],
+  fr: [
+    { domain: 'lemonde.fr', url: 'https://www.lemonde.fr/' },
+    { domain: 'lefigaro.fr', url: 'https://www.lefigaro.fr/' },
+    { domain: 'france24.com', url: 'https://www.france24.com/fr/' }
+  ],
+  ja: [
+    { domain: 'nhk.or.jp', url: 'https://www3.nhk.or.jp/news/' },
+    { domain: 'asahi.com', url: 'https://www.asahi.com/' },
+    { domain: 'yomiuri.co.jp', url: 'https://www.yomiuri.co.jp/' }
+  ],
+  ko: [
+    { domain: 'news.naver.com', url: 'https://news.naver.com/' },
+    { domain: 'chosun.com', url: 'https://www.chosun.com/' },
+    { domain: 'hani.co.kr', url: 'https://www.hani.co.kr/' }
+  ]
+};
+
+// File persistence di userData — sessionCount, learned weights, & blocklist
+// domain SELAMAT dari restart OS, gak balik ke nol tiap kali dibuka ulang.
+const POISON_STATE_FILE = path.join(app.getPath('userData'), 'poison-engine-state.json');
+
+// Setiap fingerprint = kombinasi UA (browser+OS) + negara/timezone + bahasa Accept-Language + device class.
+// Dikelompokkin biar realistis: UA Windows gak bakal ketiban timezone/locale yang gak nyambung,
+// device mobile dapet viewport & UA mobile beneran, dst — bukan campur random asal jadi.
+const POISON_FINGERPRINTS = [
+  // ---- Desktop, Indonesia ----
+  { country: 'ID', tz: 'Asia/Jakarta', lang: 'id',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+    acceptLang: 'id-ID,id;q=0.9,en-US;q=0.8', device: 'desktop', viewport: { width: 1366, height: 768 } },
+  { country: 'ID', tz: 'Asia/Jakarta', lang: 'id',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0',
+    acceptLang: 'id-ID,id;q=0.9,en-US;q=0.7', device: 'desktop', viewport: { width: 1536, height: 864 } },
+  { country: 'ID', tz: 'Asia/Jakarta', lang: 'id',
+    ua: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+    acceptLang: 'id-ID,id;q=0.9', device: 'desktop', viewport: { width: 1280, height: 800 } },
+  // ---- Desktop, US ----
+  { country: 'US', tz: 'America/New_York', lang: 'en',
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+    acceptLang: 'en-US,en;q=0.9', device: 'desktop', viewport: { width: 1440, height: 900 } },
+  { country: 'US', tz: 'America/Los_Angeles', lang: 'en',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    acceptLang: 'en-US,en;q=0.9', device: 'desktop', viewport: { width: 1920, height: 1080 } },
+  { country: 'US', tz: 'America/Chicago', lang: 'en',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.0',
+    acceptLang: 'en-US,en;q=0.9', device: 'desktop', viewport: { width: 1600, height: 900 } },
+  // ---- Desktop, Spanyol/Meksiko ----
+  { country: 'ES', tz: 'Europe/Madrid', lang: 'es',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+    acceptLang: 'es-ES,es;q=0.9,en;q=0.6', device: 'desktop', viewport: { width: 1366, height: 768 } },
+  { country: 'MX', tz: 'America/Mexico_City', lang: 'es',
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+    acceptLang: 'es-MX,es;q=0.9,en;q=0.5', device: 'desktop', viewport: { width: 1440, height: 900 } },
+  // ---- Desktop, Brasil ----
+  { country: 'BR', tz: 'America/Sao_Paulo', lang: 'pt',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36',
+    acceptLang: 'pt-BR,pt;q=0.9,en;q=0.5', device: 'desktop', viewport: { width: 1366, height: 768 } },
+  // ---- Desktop, Jerman ----
+  { country: 'DE', tz: 'Europe/Berlin', lang: 'de',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0',
+    acceptLang: 'de-DE,de;q=0.9,en;q=0.6', device: 'desktop', viewport: { width: 1536, height: 864 } },
+  // ---- Desktop, Prancis ----
+  { country: 'FR', tz: 'Europe/Paris', lang: 'fr',
+    ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+    acceptLang: 'fr-FR,fr;q=0.9,en;q=0.5', device: 'desktop', viewport: { width: 1440, height: 900 } },
+  // ---- Desktop, Jepang ----
+  { country: 'JP', tz: 'Asia/Tokyo', lang: 'ja',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+    acceptLang: 'ja-JP,ja;q=0.9,en;q=0.4', device: 'desktop', viewport: { width: 1920, height: 1080 } },
+  // ---- Desktop, Korea Selatan ----
+  { country: 'KR', tz: 'Asia/Seoul', lang: 'ko',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    acceptLang: 'ko-KR,ko;q=0.9,en;q=0.4', device: 'desktop', viewport: { width: 1600, height: 900 } },
+  // ---- Mobile, Indonesia (Android) ----
+  { country: 'ID', tz: 'Asia/Jakarta', lang: 'id',
+    ua: 'Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Mobile Safari/537.36',
+    acceptLang: 'id-ID,id;q=0.9,en-US;q=0.7', device: 'mobile', viewport: { width: 412, height: 915 } },
+  { country: 'ID', tz: 'Asia/Jakarta', lang: 'id',
+    ua: 'Mozilla/5.0 (Linux; Android 13; Redmi Note 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36',
+    acceptLang: 'id-ID,id;q=0.9', device: 'mobile', viewport: { width: 393, height: 851 } },
+  // ---- Mobile, US (iPhone) ----
+  { country: 'US', tz: 'America/New_York', lang: 'en',
+    ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    acceptLang: 'en-US,en;q=0.9', device: 'mobile', viewport: { width: 390, height: 844 } },
+  // ---- Mobile, Jepang (iPhone) ----
+  { country: 'JP', tz: 'Asia/Tokyo', lang: 'ja',
+    ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+    acceptLang: 'ja-JP,ja;q=0.9', device: 'mobile', viewport: { width: 390, height: 844 } },
+  // ---- Tablet, Jerman (iPad) ----
+  { country: 'DE', tz: 'Europe/Berlin', lang: 'de',
+    ua: 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+    acceptLang: 'de-DE,de;q=0.9,en;q=0.5', device: 'tablet', viewport: { width: 820, height: 1180 } }
+];
+
+function poisonQueryPoolsForLang(lang) {
+  return Object.values(POISON_QUERY_POOLS).filter((pool) => pool.lang === lang);
+}
+
+const POISON_MIN_GAP_MS = 3 * 60 * 1000;   // jeda antar sesi minimal 3 menit
+const POISON_MAX_GAP_MS = 8 * 60 * 1000;   // maksimal 8 menit (rate limiter, biar gak nyurigain/ngeflood)
+const POISON_MIN_DWELL_MS = 8 * 1000;      // minimal 8 detik "baca" halaman
+const POISON_MAX_DWELL_MS = 25 * 1000;     // maksimal 25 detik
+
+const poisonState = {
+  active: false,
+  sessionCount: 0,
+  queryCount: 0,
+  log: [],              // { time, type, query, url }
+  timer: null,
+  currentGhost: null,   // BrowserWindow yang lagi jalan, kalau ada
+  typeWeights: {},       // { [targetType]: multiplier 0.2–2.0 } — "belajar" dari sukses/gagal
+  domainBlocklist: {}    // { [domain]: expiresAtTimestampMs } — skip sementara abis kena captcha/block
+};
+
+// Muat sessionCount/queryCount/weights/blocklist dari disk pas engine di-load,
+// biar gak reset ke nol tiap kali OS di-restart.
+function poisonLoadPersisted() {
+  try {
+    const raw = fs.readFileSync(POISON_STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    poisonState.sessionCount = data.sessionCount || 0;
+    poisonState.queryCount = data.queryCount || 0;
+    poisonState.typeWeights = data.typeWeights || {};
+    poisonState.domainBlocklist = data.domainBlocklist || {};
+  } catch (e) { /* belum ada file atau rusak — mulai dari default, aman diabaikan */ }
+}
+
+let poisonSaveTimer = null;
+function poisonSavePersisted() {
+  // Debounce dikit biar gak nulis file berkali-kali pas beberapa event numpuk beruntun.
+  if (poisonSaveTimer) clearTimeout(poisonSaveTimer);
+  poisonSaveTimer = setTimeout(() => {
+    try {
+      fs.writeFileSync(POISON_STATE_FILE, JSON.stringify({
+        sessionCount: poisonState.sessionCount,
+        queryCount: poisonState.queryCount,
+        typeWeights: poisonState.typeWeights,
+        domainBlocklist: poisonState.domainBlocklist
+      }, null, 2));
+    } catch (e) { /* disk penuh / permission error, aman diabaikan — gak fatal buat engine */ }
+  }, 400);
+}
+
+// Naikin/turunin bobot satu tipe target berdasarkan hasil sesi (sukses = naik dikit,
+// kena block/error = turun) supaya lama-lama engine lebih sering milih tipe yang aman
+// dan lebih jarang milih yang sering kena captcha.
+function poisonAdjustWeight(type, delta) {
+  const cur = typeof poisonState.typeWeights[type] === 'number' ? poisonState.typeWeights[type] : 1;
+  poisonState.typeWeights[type] = Math.min(2, Math.max(0.2, cur + delta));
+}
+
+function poisonDomainFromUrl(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+}
+
+function poisonIsDomainBlocked(domain) {
+  const until = poisonState.domainBlocklist[domain];
+  return !!(until && until > Date.now());
+}
+
+function poisonBlockDomain(domain, ms) {
+  if (!domain) return;
+  poisonState.domainBlocklist[domain] = Date.now() + ms;
+}
+
+poisonLoadPersisted();
+
+function poisonRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function poisonRandomRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function poisonSleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function poisonPushLog(entry) {
+  poisonState.log.unshift({ time: Date.now(), ...entry });
+  if (poisonState.log.length > 100) {
+    poisonState.log = poisonState.log.slice(0, 100);
+  }
+  if (win && !win.isDestroyed()) {
+    win.webContents.send('poison-activity', poisonState.log[0]);
+  }
+}
+
+// Domain Wikipedia lokal per bahasa — biar "orang Jepang" beneran baca Wikipedia Jepang,
+// bukan tiba-tiba nyasar ke domain bahasa lain yang gak nyambung sama fingerprint-nya.
+const POISON_WIKI_DOMAIN = {
+  id: 'id.wikipedia.org', en: 'en.wikipedia.org', es: 'es.wikipedia.org',
+  pt: 'pt.wikipedia.org', de: 'de.wikipedia.org', fr: 'fr.wikipedia.org',
+  ja: 'ja.wikipedia.org', ko: 'ko.wikipedia.org'
+};
+
+function poisonPickFingerprint() {
+  return poisonRandom(POISON_FINGERPRINTS);
+}
+
+// Bobot dasar per tipe target — di-scale lagi sama poisonState.typeWeights
+// (belajar dari histori sukses/gagal) sebelum weighted-random dipilih.
+const POISON_BASE_TYPE_WEIGHTS = {
+  'google-search': 26,
+  'youtube-search': 16,
+  'ecommerce-search': 16,
+  'news-browse': 14,
+  'wikipedia': 18,
+  'reddit-random': 10
+};
+
+function poisonEffectiveWeight(type) {
+  const base = POISON_BASE_TYPE_WEIGHTS[type] || 10;
+  const learned = poisonState.typeWeights[type];
+  const factor = typeof learned === 'number' ? Math.min(2, Math.max(0.2, learned)) : 1;
+  return base * factor;
+}
+
+function poisonWeightedPick(candidates) {
+  const usable = candidates.filter((c) => c.weight > 0);
+  const total = usable.reduce((s, c) => s + c.weight, 0);
+  if (!total) return candidates[0];
+  let r = Math.random() * total;
+  for (const c of usable) {
+    r -= c.weight;
+    if (r <= 0) return c;
+  }
+  return usable[usable.length - 1];
+}
+
+function poisonPickTarget(fingerprint) {
+  const lang = fingerprint.lang;
+  const wikiDomain = POISON_WIKI_DOMAIN[lang] || 'en.wikipedia.org';
+  // Query dicari HANYA dari pool bahasa yang sama sama fingerprint —
+  // orang "Jerman" gak bakal tiba-tiba search "resep sambal matah".
+  const pools = poisonQueryPoolsForLang(lang);
+  const pickQuery = () => {
+    const pool = pools.length ? poisonRandom(pools) : poisonRandom(Object.values(POISON_QUERY_POOLS));
+    return poisonRandom(pool.items);
+  };
+
+  const candidates = [];
+
+  candidates.push({
+    key: 'google-search', domain: 'google.com', weight: poisonEffectiveWeight('google-search'),
+    build: () => {
+      const query = pickQuery();
+      return {
+        type: 'google-search', query,
+        url: 'https://www.google.com/search?q=' + encodeURIComponent(query) + '&hl=' + lang,
+        useTyping: Math.random() < 0.4, homeUrl: 'https://www.google.com/?hl=' + lang,
+        inputSelector: 'textarea[name="q"], input[name="q"]'
+      };
+    }
+  });
+
+  candidates.push({
+    key: 'youtube-search', domain: 'youtube.com', weight: poisonEffectiveWeight('youtube-search'),
+    build: () => {
+      const query = pickQuery();
+      return {
+        type: 'youtube-search', query,
+        url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query),
+        useTyping: Math.random() < 0.3, homeUrl: 'https://www.youtube.com/',
+        inputSelector: 'input#search, input[name="search_query"]'
+      };
+    }
+  });
+
+  const ecomSites = POISON_ECOMMERCE_SITES[lang] || POISON_ECOMMERCE_SITES.en;
+  if (ecomSites && ecomSites.length) {
+    candidates.push({
+      key: 'ecommerce-search', domain: null, weight: poisonEffectiveWeight('ecommerce-search'),
+      build: () => {
+        const site = poisonRandom(ecomSites);
+        const query = pickQuery();
+        return { type: 'ecommerce-search', query, url: site.build(query), useTyping: false };
+      }
+    });
+  }
+
+  const newsSites = POISON_NEWS_SITES[lang] || POISON_NEWS_SITES.en;
+  if (newsSites && newsSites.length) {
+    candidates.push({
+      key: 'news-browse', domain: null, weight: poisonEffectiveWeight('news-browse'),
+      build: () => {
+        const site = poisonRandom(newsSites);
+        return { type: 'news-browse', query: null, url: site.url, useTyping: false };
+      }
+    });
+  }
+
+  candidates.push({
+    key: 'wikipedia', domain: wikiDomain, weight: poisonEffectiveWeight('wikipedia'),
+    build: () => {
+      // 45% artikel beneran random, 55% search topik yang nyambung sama pool bahasa
+      // ini sendiri — biar gak monoton "Special:Random" mulu, lebih mirip pola orang beneran.
+      if (Math.random() < 0.45 || !pools.length) {
+        return { type: 'wikipedia-random', query: null, url: 'https://' + wikiDomain + '/wiki/Special:Random', useTyping: false };
+      }
+      const query = pickQuery();
+      return {
+        type: 'wikipedia-search', query,
+        url: 'https://' + wikiDomain + '/w/index.php?search=' + encodeURIComponent(query) + '&fulltext=1',
+        useTyping: false
+      };
+    }
+  });
+
+  candidates.push({
+    key: 'reddit-random', domain: 'reddit.com', weight: poisonEffectiveWeight('reddit-random'),
+    build: () => ({ type: 'reddit-random', query: null, url: 'https://www.reddit.com/r/random/', useTyping: false })
+  });
+
+  // Buang kandidat yang domainnya lagi di-blocklist sementara (abis kena captcha/blocked
+  // barusan). Kalau semua ke-block (jarang banget), tetep pakai daftar penuh biar gak macet.
+  const filtered = candidates.filter((c) => !c.domain || !poisonIsDomainBlocked(c.domain));
+  const pool = filtered.length ? filtered : candidates;
+  const chosen = poisonWeightedPick(pool);
+  return chosen.build();
+}
+
+function poisonBezierPoint(p0, p1, p2, p3, t) {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x,
+    y: mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y
+  };
+}
+
+// Gerakin mouse pakai sendInputEvent (native input, event.isTrusted === true),
+// bukan dispatchEvent dari JS (yang gampang kebaca sebagai bukan gerakan asli).
+// Lintasannya lewat kurva bezier acak, bukan garis lurus antar dua titik.
+async function poisonSimulateMouseMove(webContents, viewport) {
+  if (webContents.isDestroyed()) return;
+  const start = { x: poisonRandomRange(20, viewport.width - 20), y: poisonRandomRange(20, viewport.height - 20) };
+  const end = { x: poisonRandomRange(20, viewport.width - 20), y: poisonRandomRange(20, viewport.height - 20) };
+  const ctrl1 = { x: poisonRandomRange(0, viewport.width), y: poisonRandomRange(0, viewport.height) };
+  const ctrl2 = { x: poisonRandomRange(0, viewport.width), y: poisonRandomRange(0, viewport.height) };
+  const steps = 14 + Math.floor(Math.random() * 10);
+  for (let i = 0; i <= steps; i++) {
+    if (webContents.isDestroyed()) return;
+    const pt = poisonBezierPoint(start, ctrl1, ctrl2, end, i / steps);
+    try { webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(pt.x), y: Math.round(pt.y) }); } catch (e) {}
+    await poisonSleep(12 + Math.random() * 28);
+  }
+}
+
+// Kadang orang beneran cuma diem mikir 10-60 detik di tengah baca. ~18% chance per sesi.
+async function poisonMaybeIdle() {
+  if (Math.random() < 0.18) {
+    await poisonSleep(poisonRandomRange(10000, 60000));
+  }
+}
+
+async function poisonClickAt(webContents, x, y) {
+  try {
+    webContents.sendInputEvent({ type: 'mouseMove', x, y });
+    webContents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
+    await poisonSleep(40 + Math.random() * 80);
+    webContents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 });
+  } catch (e) {}
+}
+
+// Ngetik karakter demi karakter lewat keyboard event trusted, sesekali ada "typo"
+// kecil yang langsung dibenerin (backspace) — bukan value yang di-set langsung
+// lewat JS, yang ritmenya gak natural dan gampang kedeteksi.
+async function poisonSimulateTyping(webContents, text) {
+  for (const ch of text) {
+    if (webContents.isDestroyed()) return;
+    if (Math.random() < 0.04 && /[a-z]/i.test(ch)) {
+      const typo = 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+      try {
+        webContents.sendInputEvent({ type: 'keyDown', keyCode: typo });
+        webContents.sendInputEvent({ type: 'char', keyCode: typo });
+        webContents.sendInputEvent({ type: 'keyUp', keyCode: typo });
+      } catch (e) {}
+      await poisonSleep(60 + Math.random() * 120);
+      try {
+        webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
+        webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
+      } catch (e) {}
+      await poisonSleep(80 + Math.random() * 140);
+    }
+    try {
+      webContents.sendInputEvent({ type: 'keyDown', keyCode: ch });
+      webContents.sendInputEvent({ type: 'char', keyCode: ch });
+      webContents.sendInputEvent({ type: 'keyUp', keyCode: ch });
+    } catch (e) {}
+    await poisonSleep(55 + Math.random() * 160);
+  }
+}
+
+// Buat sebagian sesi search (useTyping), buka homepage dulu, klik kolom
+// search-nya beneran (bukan .value = ... lewat JS), baru ngetik pelan-pelan
+// dan pencet Enter — trajektorinya lebih mirip manusia dibanding langsung
+// loadURL ke URL hasil pencarian.
+async function poisonTrySearchByTyping(webContents, target) {
+  if (!target.useTyping || !target.homeUrl || !target.inputSelector) return false;
+  try {
+    await webContents.loadURL(target.homeUrl);
+    await poisonSleep(1200 + Math.random() * 800);
+    const rect = await webContents.executeJavaScript(`
+      (function() {
+        const el = document.querySelector(${JSON.stringify(target.inputSelector)});
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+      })();
+    `).catch(() => null);
+    if (!rect || rect.w <= 0) return false;
+    await poisonClickAt(webContents, Math.round(rect.x), Math.round(rect.y));
+    await poisonSleep(300 + Math.random() * 400);
+    await poisonSimulateTyping(webContents, target.query);
+    await poisonSleep(250 + Math.random() * 350);
+    try {
+      webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' });
+      webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Enter' });
+    } catch (e) {}
+    await poisonSleep(1500 + Math.random() * 1200);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Tanda-tanda halaman lagi nampilin captcha / "unusual traffic" / blokir bot.
+// Dicek dari title + potongan teks body, bukan cuma status code (yang sering 200
+// meski isinya captcha).
+const POISON_BLOCK_SIGNALS = [
+  'unusual traffic', 'captcha', 'verify you are human', 'are you a robot',
+  'access denied', 'enable javascript and cookies', 'automated queries',
+  'terlalu banyak permintaan', 'akses ditolak', 'robot check', 'pardon our interruption'
+];
+
+async function poisonCheckBlocked(webContents) {
+  try {
+    const text = await webContents.executeJavaScript(`
+      (function() {
+        const t = (document.title || '') + ' ' + (document.body ? document.body.innerText.slice(0, 2000) : '');
+        return t.toLowerCase();
+      })();
+    `);
+    return POISON_BLOCK_SIGNALS.some((s) => text.includes(s));
+  } catch (e) {
+    return false;
+  }
+}
+
+async function poisonSimulateBehavior(webContents, deviceClass, viewport) {
+  const isMobile = deviceClass === 'mobile' || deviceClass === 'tablet';
+
+  // Mouse trajectory cuma masuk akal buat desktop (mobile gak punya cursor).
+  if (!isMobile && viewport) {
+    await poisonSimulateMouseMove(webContents, viewport);
+  }
+
+  await poisonMaybeIdle();
+
+  // Mobile/tablet: scroll lebih pendek-pendek & lebih sering (kebiasaan swipe jempol),
+  // desktop: scroll lebih jarang tapi jarak per scroll lebih jauh (kebiasaan mouse wheel).
+  const scrollSteps = isMobile ? 4 + Math.floor(Math.random() * 5) : 3 + Math.floor(Math.random() * 4);
+  const deltaRange = isMobile ? [80, 260] : [120, 420];
+  const pauseRange = isMobile ? [500, 1800] : [700, 2400];
+
+  for (let i = 0; i < scrollSteps; i++) {
+    if (webContents.isDestroyed()) return;
+    const delta = deltaRange[0] + Math.floor(Math.random() * (deltaRange[1] - deltaRange[0]));
+    try {
+      await webContents.executeJavaScript(`window.scrollBy({ top: ${delta}, behavior: 'smooth' });`);
+    } catch (e) { /* halaman mungkin belum siap / navigasi lain, aman diabaikan */ }
+    await poisonSleep(poisonRandomRange(pauseRange[0], pauseRange[1]));
+  }
+
+  if (webContents.isDestroyed()) return;
+
+  // 20% chance balik scroll ke atas 1-2 kali, kayak orang mau baca ulang sesuatu.
+  if (Math.random() < 0.2) {
+    const upTimes = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < upTimes; i++) {
+      if (webContents.isDestroyed()) return;
+      const delta = 150 + Math.floor(Math.random() * 300);
+      try {
+        await webContents.executeJavaScript(`window.scrollBy({ top: -${delta}, behavior: 'smooth' });`);
+      } catch (e) { /* aman diabaikan */ }
+      await poisonSleep(poisonRandomRange(500, 1600));
+    }
+  }
+
+  if (webContents.isDestroyed()) return;
+
+  // Mobile lebih jarang "klik nyasar" ke link kecil (elemen sentuh perlu presisi lebih),
+  // jadi peluang klik link dikecilin dikit dibanding desktop.
+  const clickChance = isMobile ? 0.6 : 0.85;
+  if (Math.random() > clickChance) return;
+
+  try {
+    await webContents.executeJavaScript(`
+      (function() {
+        const links = Array.from(document.querySelectorAll('a[href]')).filter(function(a) {
+          const r = a.getBoundingClientRect();
+          const minSize = ${isMobile ? 20 : 10};
+          return r.top > 40 && r.top < window.innerHeight - 40 && r.width > minSize && r.height > minSize / 2;
+        });
+        if (links.length) {
+          const el = links[Math.floor(Math.random() * links.length)];
+          el.click();
+        }
+        true;
+      })();
+    `);
+  } catch (e) { /* gak masalah kalau gagal klik, sesi tetap dianggap valid */ }
+}
+
+async function poisonRunSession() {
+  if (!poisonState.active) return;
+
+  const fingerprint = poisonPickFingerprint();
+  const target = poisonPickTarget(fingerprint);
+  const partition = `poison-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  const viewport = fingerprint.viewport;
+
+  const ghost = new BrowserWindow({
+    show: false,
+    width: viewport.width,
+    height: viewport.height,
+    webPreferences: {
+      partition,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      images: true
+    }
+  });
+
+  poisonState.currentGhost = ghost;
+
+  try {
+    ghost.webContents.setUserAgent(fingerprint.ua);
+
+    const ghostSession = session.fromPartition(partition);
+    ghostSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders['Accept-Language'] = fingerprint.acceptLang;
+      // Paksa Electron nembak timezone sesuai fingerprint biar Date/Intl API
+      // konsisten sama negara yang lagi "dipakai" — bukan ke-leak timezone asli lu.
+      callback({ requestHeaders: details.requestHeaders });
+    });
+
+    try {
+      // Electron 22+: override timezone per-session biar Intl.DateTimeFormat()
+      // dan new Date() di halaman yang dibuka ikut fingerprint, bukan timezone OS asli.
+      if (typeof ghostSession.setTimezoneOverride === 'function') {
+        ghostSession.setTimezoneOverride(fingerprint.tz);
+      }
+    } catch (e) { /* versi Electron lama gak punya API ini, aman diabaikan */ }
+
+    poisonState.sessionCount += 1;
+    if (target.query) poisonState.queryCount += 1;
+
+    // typeKey = kategori buat weight-learning (beberapa target.type mengarah ke kategori sama,
+    // misal wikipedia-random & wikipedia-search sama-sama 'wikipedia').
+    const typeKey = target.type.indexOf('wikipedia') === 0 ? 'wikipedia' : target.type;
+
+    poisonPushLog({
+      type: target.type,
+      query: target.query,
+      url: target.url,
+      status: 'started',
+      fingerprint: {
+        country: fingerprint.country,
+        lang: fingerprint.lang,
+        device: fingerprint.device
+      }
+    });
+
+    // Sebagian sesi search "ngetik beneran" di kolom search (lebih mahal tapi lebih
+    // natural); sisanya langsung loadURL ke hasil pencarian kayak sebelumnya.
+    let typedIn = false;
+    if (target.useTyping) {
+      typedIn = await poisonTrySearchByTyping(ghost.webContents, target);
+    }
+    if (!typedIn) {
+      await ghost.loadURL(target.url).catch(() => {});
+      await poisonSleep(1500 + Math.random() * 1500); // kasih waktu halaman render dulu
+    }
+
+    const blocked = !ghost.isDestroyed() && poisonState.active && await poisonCheckBlocked(ghost.webContents);
+
+    if (blocked) {
+      // Ketauan captcha/unusual-traffic — jangan lanjut simulasi perilaku di halaman ini,
+      // skip domainnya buat beberapa jam, dan turunin bobot tipe target ini dikit.
+      const domain = poisonDomainFromUrl(target.url);
+      poisonBlockDomain(domain, 4 * 60 * 60 * 1000 + Math.random() * 2 * 60 * 60 * 1000); // 4-6 jam
+      poisonAdjustWeight(typeKey, -0.3);
+
+      poisonPushLog({
+        type: target.type, query: target.query, url: target.url, status: 'blocked', domain,
+        fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+      });
+    } else {
+      if (!ghost.isDestroyed() && poisonState.active) {
+        await poisonSimulateBehavior(ghost.webContents, fingerprint.device, viewport);
+      }
+
+      const dwell = poisonRandomRange(POISON_MIN_DWELL_MS, POISON_MAX_DWELL_MS);
+      await poisonSleep(dwell);
+      poisonAdjustWeight(typeKey, 0.05);
+
+      poisonPushLog({
+        type: target.type,
+        query: target.query,
+        url: target.url,
+        status: 'done',
+        fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+      });
+    }
+
+    poisonSavePersisted();
+  } catch (e) {
+    const typeKey = target.type.indexOf('wikipedia') === 0 ? 'wikipedia' : target.type;
+    poisonAdjustWeight(typeKey, -0.15);
+    poisonPushLog({
+      type: target.type, query: target.query, url: target.url, status: 'error', error: e.message,
+      fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+    });
+    poisonSavePersisted();
+  } finally {
+    try {
+      if (!ghost.isDestroyed()) ghost.destroy();
+    } catch (e) {}
+    if (poisonState.currentGhost === ghost) poisonState.currentGhost = null;
+  }
+
+  if (poisonState.active) {
+    const gap = poisonRandomRange(POISON_MIN_GAP_MS, POISON_MAX_GAP_MS);
+    poisonState.timer = setTimeout(poisonRunSession, gap);
+  }
+}
+
+function poisonStart() {
+  if (poisonState.active) return poisonGetStatus();
+
+  poisonState.active = true;
+  poisonPushLog({ type: 'engine', query: null, url: null, status: 'engine-started' });
+
+  // Sesi pertama jalan cepat (dalam beberapa detik) biar berasa responsif pas ditoggle,
+  // sesi berikutnya baru ngikutin rate limiter normal.
+  poisonState.timer = setTimeout(poisonRunSession, 2000 + Math.random() * 3000);
+
+  return poisonGetStatus();
+}
+
+function poisonStop() {
+  poisonState.active = false;
+
+  if (poisonState.timer) {
+    clearTimeout(poisonState.timer);
+    poisonState.timer = null;
+  }
+
+  if (poisonState.currentGhost && !poisonState.currentGhost.isDestroyed()) {
+    try { poisonState.currentGhost.destroy(); } catch (e) {}
+  }
+  poisonState.currentGhost = null;
+
+  poisonPushLog({ type: 'engine', query: null, url: null, status: 'engine-stopped' });
+
+  return poisonGetStatus();
+}
+
+function poisonGetStatus() {
+  const now = Date.now();
+  const blockedDomains = Object.keys(poisonState.domainBlocklist).filter((d) => poisonState.domainBlocklist[d] > now);
+  return {
+    active: poisonState.active,
+    sessionCount: poisonState.sessionCount,
+    queryCount: poisonState.queryCount,
+    blockedDomains,
+    typeWeights: poisonState.typeWeights,
+    log: poisonState.log.slice(0, 30)
+  };
+}
+
+app.on('before-quit', () => {
+  try { poisonStop(); } catch (e) {}
+});
+
+// ---- IPC HANDLERS: DATA POISONING ENGINE ----
+
+ipcMain.handle('poison-start', () => poisonStart());
+ipcMain.handle('poison-stop', () => poisonStop());
+ipcMain.handle('poison-status', () => poisonGetStatus());
+
+// ==================================
+// GEOLOCATION & TIME SPOOFER
+// ==================================
+// Override navigator.geolocation, navigator.language/languages, header
+// Accept-Language, dan timezone Date/Intl di SEMUA tab browser (bawaan
+// akhtarBrowser, pakai session.defaultSession) supaya web ngeliat lu
+// seolah-olah lagi browsing dari negara/kota lain. Timezone di-paksa di
+// level native Electron (session.setTimezoneOverride) biar Date/Intl API
+// beneran konsisten; geolocation & bahasa gak punya API native-nya jadi
+// disuntik lewat CDP (Page.addScriptToEvaluateOnNewDocument) biar kepasang
+// SEBELUM script apapun di halaman sempat jalan — bukan cuma dom-ready
+// yang gampang kedahuluan script deteksi fingerprint.
+//
+// 27 negara x beberapa kota (100+ lokasi total).
+
+const SPOOF_COUNTRIES = [
+  { code: 'ID', name: 'Indonesia', flag: '🇮🇩', locale: 'id-ID' },
+  { code: 'US', name: 'Amerika Serikat', flag: '🇺🇸', locale: 'en-US' },
+  { code: 'GB', name: 'Inggris', flag: '🇬🇧', locale: 'en-GB' },
+  { code: 'JP', name: 'Jepang', flag: '🇯🇵', locale: 'ja-JP' },
+  { code: 'KR', name: 'Korea Selatan', flag: '🇰🇷', locale: 'ko-KR' },
+  { code: 'CN', name: 'China', flag: '🇨🇳', locale: 'zh-CN' },
+  { code: 'SG', name: 'Singapura', flag: '🇸🇬', locale: 'en-SG' },
+  { code: 'MY', name: 'Malaysia', flag: '🇲🇾', locale: 'ms-MY' },
+  { code: 'TH', name: 'Thailand', flag: '🇹🇭', locale: 'th-TH' },
+  { code: 'VN', name: 'Vietnam', flag: '🇻🇳', locale: 'vi-VN' },
+  { code: 'PH', name: 'Filipina', flag: '🇵🇭', locale: 'fil-PH' },
+  { code: 'IN', name: 'India', flag: '🇮🇳', locale: 'en-IN' },
+  { code: 'AU', name: 'Australia', flag: '🇦🇺', locale: 'en-AU' },
+  { code: 'DE', name: 'Jerman', flag: '🇩🇪', locale: 'de-DE' },
+  { code: 'FR', name: 'Prancis', flag: '🇫🇷', locale: 'fr-FR' },
+  { code: 'ES', name: 'Spanyol', flag: '🇪🇸', locale: 'es-ES' },
+  { code: 'IT', name: 'Italia', flag: '🇮🇹', locale: 'it-IT' },
+  { code: 'NL', name: 'Belanda', flag: '🇳🇱', locale: 'nl-NL' },
+  { code: 'RU', name: 'Rusia', flag: '🇷🇺', locale: 'ru-RU' },
+  { code: 'BR', name: 'Brasil', flag: '🇧🇷', locale: 'pt-BR' },
+  { code: 'MX', name: 'Meksiko', flag: '🇲🇽', locale: 'es-MX' },
+  { code: 'CA', name: 'Kanada', flag: '🇨🇦', locale: 'en-CA' },
+  { code: 'AE', name: 'Uni Emirat Arab', flag: '🇦🇪', locale: 'ar-AE' },
+  { code: 'SA', name: 'Arab Saudi', flag: '🇸🇦', locale: 'ar-SA' },
+  { code: 'TR', name: 'Turki', flag: '🇹🇷', locale: 'tr-TR' },
+  { code: 'EG', name: 'Mesir', flag: '🇪🇬', locale: 'ar-EG' },
+  { code: 'ZA', name: 'Afrika Selatan', flag: '🇿🇦', locale: 'en-ZA' }
+];
+
+// locale di tiap lokasi cuma diisi kalau BEDA dari default negaranya
+// (contoh: Montreal pakai fr-CA, sementara kota Kanada lain en-CA).
+const SPOOF_LOCATIONS = [
+  // ---- Indonesia ----
+  { id: 'id-jakarta', country: 'ID', city: 'Jakarta', lat: -6.2088, lng: 106.8456, tz: 'Asia/Jakarta' },
+  { id: 'id-surabaya', country: 'ID', city: 'Surabaya', lat: -7.2575, lng: 112.7521, tz: 'Asia/Jakarta' },
+  { id: 'id-bandung', country: 'ID', city: 'Bandung', lat: -6.9175, lng: 107.6191, tz: 'Asia/Jakarta' },
+  { id: 'id-medan', country: 'ID', city: 'Medan', lat: 3.5952, lng: 98.6722, tz: 'Asia/Jakarta' },
+  { id: 'id-denpasar', country: 'ID', city: 'Denpasar (Bali)', lat: -8.6705, lng: 115.2126, tz: 'Asia/Makassar' },
+  { id: 'id-yogyakarta', country: 'ID', city: 'Yogyakarta', lat: -7.7956, lng: 110.3695, tz: 'Asia/Jakarta' },
+  { id: 'id-makassar', country: 'ID', city: 'Makassar', lat: -5.1477, lng: 119.4327, tz: 'Asia/Makassar' },
+  { id: 'id-semarang', country: 'ID', city: 'Semarang', lat: -6.9932, lng: 110.4203, tz: 'Asia/Jakarta' },
+
+  // ---- Amerika Serikat ----
+  { id: 'us-newyork', country: 'US', city: 'New York', lat: 40.7128, lng: -74.0060, tz: 'America/New_York' },
+  { id: 'us-losangeles', country: 'US', city: 'Los Angeles', lat: 34.0522, lng: -118.2437, tz: 'America/Los_Angeles' },
+  { id: 'us-chicago', country: 'US', city: 'Chicago', lat: 41.8781, lng: -87.6298, tz: 'America/Chicago' },
+  { id: 'us-miami', country: 'US', city: 'Miami', lat: 25.7617, lng: -80.1918, tz: 'America/New_York' },
+  { id: 'us-seattle', country: 'US', city: 'Seattle', lat: 47.6062, lng: -122.3321, tz: 'America/Los_Angeles' },
+  { id: 'us-dallas', country: 'US', city: 'Dallas', lat: 32.7767, lng: -96.7970, tz: 'America/Chicago' },
+  { id: 'us-denver', country: 'US', city: 'Denver', lat: 39.7392, lng: -104.9903, tz: 'America/Denver' },
+  { id: 'us-honolulu', country: 'US', city: 'Honolulu', lat: 21.3069, lng: -157.8583, tz: 'Pacific/Honolulu' },
+  { id: 'us-boston', country: 'US', city: 'Boston', lat: 42.3601, lng: -71.0589, tz: 'America/New_York' },
+  { id: 'us-atlanta', country: 'US', city: 'Atlanta', lat: 33.7490, lng: -84.3880, tz: 'America/New_York' },
+
+  // ---- Inggris ----
+  { id: 'gb-london', country: 'GB', city: 'London', lat: 51.5074, lng: -0.1278, tz: 'Europe/London' },
+  { id: 'gb-manchester', country: 'GB', city: 'Manchester', lat: 53.4808, lng: -2.2426, tz: 'Europe/London' },
+  { id: 'gb-edinburgh', country: 'GB', city: 'Edinburgh', lat: 55.9533, lng: -3.1883, tz: 'Europe/London' },
+  { id: 'gb-birmingham', country: 'GB', city: 'Birmingham', lat: 52.4862, lng: -1.8904, tz: 'Europe/London' },
+
+  // ---- Jepang ----
+  { id: 'jp-tokyo', country: 'JP', city: 'Tokyo', lat: 35.6762, lng: 139.6503, tz: 'Asia/Tokyo' },
+  { id: 'jp-osaka', country: 'JP', city: 'Osaka', lat: 34.6937, lng: 135.5023, tz: 'Asia/Tokyo' },
+  { id: 'jp-sapporo', country: 'JP', city: 'Sapporo', lat: 43.0618, lng: 141.3545, tz: 'Asia/Tokyo' },
+  { id: 'jp-kyoto', country: 'JP', city: 'Kyoto', lat: 35.0116, lng: 135.7681, tz: 'Asia/Tokyo' },
+  { id: 'jp-fukuoka', country: 'JP', city: 'Fukuoka', lat: 33.5904, lng: 130.4017, tz: 'Asia/Tokyo' },
+  { id: 'jp-yokohama', country: 'JP', city: 'Yokohama', lat: 35.4437, lng: 139.6380, tz: 'Asia/Tokyo' },
+
+  // ---- Korea Selatan ----
+  { id: 'kr-seoul', country: 'KR', city: 'Seoul', lat: 37.5665, lng: 126.9780, tz: 'Asia/Seoul' },
+  { id: 'kr-busan', country: 'KR', city: 'Busan', lat: 35.1796, lng: 129.0756, tz: 'Asia/Seoul' },
+  { id: 'kr-incheon', country: 'KR', city: 'Incheon', lat: 37.4563, lng: 126.7052, tz: 'Asia/Seoul' },
+
+  // ---- China ----
+  { id: 'cn-beijing', country: 'CN', city: 'Beijing', lat: 39.9042, lng: 116.4074, tz: 'Asia/Shanghai' },
+  { id: 'cn-shanghai', country: 'CN', city: 'Shanghai', lat: 31.2304, lng: 121.4737, tz: 'Asia/Shanghai' },
+  { id: 'cn-shenzhen', country: 'CN', city: 'Shenzhen', lat: 22.5431, lng: 114.0579, tz: 'Asia/Shanghai' },
+  { id: 'cn-chengdu', country: 'CN', city: 'Chengdu', lat: 30.5728, lng: 104.0668, tz: 'Asia/Shanghai' },
+  { id: 'cn-guangzhou', country: 'CN', city: 'Guangzhou', lat: 23.1291, lng: 113.2644, tz: 'Asia/Shanghai' },
+  { id: 'cn-xian', country: 'CN', city: "Xi'an", lat: 34.3416, lng: 108.9398, tz: 'Asia/Shanghai' },
+  { id: 'cn-chongqing', country: 'CN', city: 'Chongqing', lat: 29.4316, lng: 106.9123, tz: 'Asia/Shanghai' },
+
+  // ---- Singapura ----
+  { id: 'sg-singapore', country: 'SG', city: 'Singapura', lat: 1.3521, lng: 103.8198, tz: 'Asia/Singapore' },
+
+  // ---- Malaysia ----
+  { id: 'my-kualalumpur', country: 'MY', city: 'Kuala Lumpur', lat: 3.1390, lng: 101.6869, tz: 'Asia/Kuala_Lumpur' },
+  { id: 'my-penang', country: 'MY', city: 'Penang', lat: 5.4141, lng: 100.3288, tz: 'Asia/Kuala_Lumpur' },
+  { id: 'my-johorbahru', country: 'MY', city: 'Johor Bahru', lat: 1.4927, lng: 103.7414, tz: 'Asia/Kuala_Lumpur' },
+
+  // ---- Thailand ----
+  { id: 'th-bangkok', country: 'TH', city: 'Bangkok', lat: 13.7563, lng: 100.5018, tz: 'Asia/Bangkok' },
+  { id: 'th-chiangmai', country: 'TH', city: 'Chiang Mai', lat: 18.7883, lng: 98.9853, tz: 'Asia/Bangkok' },
+  { id: 'th-phuket', country: 'TH', city: 'Phuket', lat: 7.8804, lng: 98.3923, tz: 'Asia/Bangkok' },
+
+  // ---- Vietnam ----
+  { id: 'vn-hanoi', country: 'VN', city: 'Hanoi', lat: 21.0278, lng: 105.8342, tz: 'Asia/Ho_Chi_Minh' },
+  { id: 'vn-hcmc', country: 'VN', city: 'Ho Chi Minh City', lat: 10.8231, lng: 106.6297, tz: 'Asia/Ho_Chi_Minh' },
+  { id: 'vn-danang', country: 'VN', city: 'Da Nang', lat: 16.0544, lng: 108.2022, tz: 'Asia/Ho_Chi_Minh' },
+
+  // ---- Filipina ----
+  { id: 'ph-manila', country: 'PH', city: 'Manila', lat: 14.5995, lng: 120.9842, tz: 'Asia/Manila' },
+  { id: 'ph-cebu', country: 'PH', city: 'Cebu', lat: 10.3157, lng: 123.8854, tz: 'Asia/Manila' },
+  { id: 'ph-davao', country: 'PH', city: 'Davao', lat: 7.1907, lng: 125.4553, tz: 'Asia/Manila' },
+
+  // ---- India ----
+  { id: 'in-mumbai', country: 'IN', city: 'Mumbai', lat: 19.0760, lng: 72.8777, tz: 'Asia/Kolkata' },
+  { id: 'in-delhi', country: 'IN', city: 'Delhi', lat: 28.7041, lng: 77.1025, tz: 'Asia/Kolkata' },
+  { id: 'in-bangalore', country: 'IN', city: 'Bangalore', lat: 12.9716, lng: 77.5946, tz: 'Asia/Kolkata' },
+  { id: 'in-kolkata', country: 'IN', city: 'Kolkata', lat: 22.5726, lng: 88.3639, tz: 'Asia/Kolkata' },
+  { id: 'in-chennai', country: 'IN', city: 'Chennai', lat: 13.0827, lng: 80.2707, tz: 'Asia/Kolkata' },
+  { id: 'in-hyderabad', country: 'IN', city: 'Hyderabad', lat: 17.3850, lng: 78.4867, tz: 'Asia/Kolkata' },
+
+  // ---- Australia ----
+  { id: 'au-sydney', country: 'AU', city: 'Sydney', lat: -33.8688, lng: 151.2093, tz: 'Australia/Sydney' },
+  { id: 'au-melbourne', country: 'AU', city: 'Melbourne', lat: -37.8136, lng: 144.9631, tz: 'Australia/Melbourne' },
+  { id: 'au-perth', country: 'AU', city: 'Perth', lat: -31.9505, lng: 115.8605, tz: 'Australia/Perth' },
+  { id: 'au-brisbane', country: 'AU', city: 'Brisbane', lat: -27.4698, lng: 153.0251, tz: 'Australia/Brisbane' },
+  { id: 'au-adelaide', country: 'AU', city: 'Adelaide', lat: -34.9285, lng: 138.6007, tz: 'Australia/Adelaide' },
+
+  // ---- Jerman ----
+  { id: 'de-berlin', country: 'DE', city: 'Berlin', lat: 52.5200, lng: 13.4050, tz: 'Europe/Berlin' },
+  { id: 'de-munich', country: 'DE', city: 'Munich', lat: 48.1351, lng: 11.5820, tz: 'Europe/Berlin' },
+  { id: 'de-frankfurt', country: 'DE', city: 'Frankfurt', lat: 50.1109, lng: 8.6821, tz: 'Europe/Berlin' },
+  { id: 'de-hamburg', country: 'DE', city: 'Hamburg', lat: 53.5511, lng: 9.9937, tz: 'Europe/Berlin' },
+  { id: 'de-cologne', country: 'DE', city: 'Cologne', lat: 50.9375, lng: 6.9603, tz: 'Europe/Berlin' },
+
+  // ---- Prancis ----
+  { id: 'fr-paris', country: 'FR', city: 'Paris', lat: 48.8566, lng: 2.3522, tz: 'Europe/Paris' },
+  { id: 'fr-marseille', country: 'FR', city: 'Marseille', lat: 43.2965, lng: 5.3698, tz: 'Europe/Paris' },
+  { id: 'fr-lyon', country: 'FR', city: 'Lyon', lat: 45.7640, lng: 4.8357, tz: 'Europe/Paris' },
+  { id: 'fr-nice', country: 'FR', city: 'Nice', lat: 43.7102, lng: 7.2620, tz: 'Europe/Paris' },
+
+  // ---- Spanyol ----
+  { id: 'es-madrid', country: 'ES', city: 'Madrid', lat: 40.4168, lng: -3.7038, tz: 'Europe/Madrid' },
+  { id: 'es-barcelona', country: 'ES', city: 'Barcelona', lat: 41.3874, lng: 2.1686, tz: 'Europe/Madrid' },
+  { id: 'es-valencia', country: 'ES', city: 'Valencia', lat: 39.4699, lng: -0.3763, tz: 'Europe/Madrid' },
+  { id: 'es-seville', country: 'ES', city: 'Seville', lat: 37.3891, lng: -5.9845, tz: 'Europe/Madrid' },
+
+  // ---- Italia ----
+  { id: 'it-rome', country: 'IT', city: 'Rome', lat: 41.9028, lng: 12.4964, tz: 'Europe/Rome' },
+  { id: 'it-milan', country: 'IT', city: 'Milan', lat: 45.4642, lng: 9.1900, tz: 'Europe/Rome' },
+  { id: 'it-naples', country: 'IT', city: 'Naples', lat: 40.8518, lng: 14.2681, tz: 'Europe/Rome' },
+  { id: 'it-florence', country: 'IT', city: 'Florence', lat: 43.7696, lng: 11.2558, tz: 'Europe/Rome' },
+
+  // ---- Belanda ----
+  { id: 'nl-amsterdam', country: 'NL', city: 'Amsterdam', lat: 52.3676, lng: 4.9041, tz: 'Europe/Amsterdam' },
+  { id: 'nl-rotterdam', country: 'NL', city: 'Rotterdam', lat: 51.9244, lng: 4.4777, tz: 'Europe/Amsterdam' },
+  { id: 'nl-thehague', country: 'NL', city: 'The Hague', lat: 52.0705, lng: 4.3007, tz: 'Europe/Amsterdam' },
+
+  // ---- Rusia ----
+  { id: 'ru-moscow', country: 'RU', city: 'Moscow', lat: 55.7558, lng: 37.6173, tz: 'Europe/Moscow' },
+  { id: 'ru-stpetersburg', country: 'RU', city: 'Saint Petersburg', lat: 59.9311, lng: 30.3609, tz: 'Europe/Moscow' },
+  { id: 'ru-novosibirsk', country: 'RU', city: 'Novosibirsk', lat: 55.0084, lng: 82.9357, tz: 'Asia/Novosibirsk' },
+  { id: 'ru-vladivostok', country: 'RU', city: 'Vladivostok', lat: 43.1332, lng: 131.9113, tz: 'Asia/Vladivostok' },
+
+  // ---- Brasil ----
+  { id: 'br-saopaulo', country: 'BR', city: 'Sao Paulo', lat: -23.5505, lng: -46.6333, tz: 'America/Sao_Paulo' },
+  { id: 'br-riodejaneiro', country: 'BR', city: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729, tz: 'America/Sao_Paulo' },
+  { id: 'br-brasilia', country: 'BR', city: 'Brasilia', lat: -15.8267, lng: -47.9218, tz: 'America/Sao_Paulo' },
+  { id: 'br-manaus', country: 'BR', city: 'Manaus', lat: -3.1190, lng: -60.0217, tz: 'America/Manaus' },
+  { id: 'br-salvador', country: 'BR', city: 'Salvador', lat: -12.9777, lng: -38.5016, tz: 'America/Bahia' },
+
+  // ---- Meksiko ----
+  { id: 'mx-mexicocity', country: 'MX', city: 'Mexico City', lat: 19.4326, lng: -99.1332, tz: 'America/Mexico_City' },
+  { id: 'mx-tijuana', country: 'MX', city: 'Tijuana', lat: 32.5149, lng: -117.0382, tz: 'America/Tijuana' },
+  { id: 'mx-cancun', country: 'MX', city: 'Cancun', lat: 21.1619, lng: -86.8515, tz: 'America/Cancun' },
+  { id: 'mx-guadalajara', country: 'MX', city: 'Guadalajara', lat: 20.6597, lng: -103.3496, tz: 'America/Mexico_City' },
+
+  // ---- Kanada ----
+  { id: 'ca-toronto', country: 'CA', city: 'Toronto', lat: 43.6532, lng: -79.3832, tz: 'America/Toronto' },
+  { id: 'ca-vancouver', country: 'CA', city: 'Vancouver', lat: 49.2827, lng: -123.1207, tz: 'America/Vancouver' },
+  { id: 'ca-calgary', country: 'CA', city: 'Calgary', lat: 51.0447, lng: -114.0719, tz: 'America/Edmonton' },
+  { id: 'ca-montreal', country: 'CA', city: 'Montreal', lat: 45.5019, lng: -73.5674, tz: 'America/Toronto', locale: 'fr-CA' },
+  { id: 'ca-ottawa', country: 'CA', city: 'Ottawa', lat: 45.4215, lng: -75.6972, tz: 'America/Toronto' },
+
+  // ---- Uni Emirat Arab ----
+  { id: 'ae-dubai', country: 'AE', city: 'Dubai', lat: 25.2048, lng: 55.2708, tz: 'Asia/Dubai' },
+  { id: 'ae-abudhabi', country: 'AE', city: 'Abu Dhabi', lat: 24.4539, lng: 54.3773, tz: 'Asia/Dubai' },
+  { id: 'ae-sharjah', country: 'AE', city: 'Sharjah', lat: 25.3463, lng: 55.4209, tz: 'Asia/Dubai' },
+
+  // ---- Arab Saudi ----
+  { id: 'sa-riyadh', country: 'SA', city: 'Riyadh', lat: 24.7136, lng: 46.6753, tz: 'Asia/Riyadh' },
+  { id: 'sa-jeddah', country: 'SA', city: 'Jeddah', lat: 21.4858, lng: 39.1925, tz: 'Asia/Riyadh' },
+  { id: 'sa-mecca', country: 'SA', city: 'Mecca', lat: 21.3891, lng: 39.8579, tz: 'Asia/Riyadh' },
+
+  // ---- Turki ----
+  { id: 'tr-istanbul', country: 'TR', city: 'Istanbul', lat: 41.0082, lng: 28.9784, tz: 'Europe/Istanbul' },
+  { id: 'tr-ankara', country: 'TR', city: 'Ankara', lat: 39.9334, lng: 32.8597, tz: 'Europe/Istanbul' },
+  { id: 'tr-izmir', country: 'TR', city: 'Izmir', lat: 38.4237, lng: 27.1428, tz: 'Europe/Istanbul' },
+
+  // ---- Mesir ----
+  { id: 'eg-cairo', country: 'EG', city: 'Cairo', lat: 30.0444, lng: 31.2357, tz: 'Africa/Cairo' },
+  { id: 'eg-alexandria', country: 'EG', city: 'Alexandria', lat: 31.2001, lng: 29.9187, tz: 'Africa/Cairo' },
+  { id: 'eg-giza', country: 'EG', city: 'Giza', lat: 30.0131, lng: 31.2089, tz: 'Africa/Cairo' },
+
+  // ---- Afrika Selatan ----
+  { id: 'za-johannesburg', country: 'ZA', city: 'Johannesburg', lat: -26.2041, lng: 28.0473, tz: 'Africa/Johannesburg' },
+  { id: 'za-capetown', country: 'ZA', city: 'Cape Town', lat: -33.9249, lng: 18.4241, tz: 'Africa/Johannesburg' },
+  { id: 'za-durban', country: 'ZA', city: 'Durban', lat: -29.8587, lng: 31.0218, tz: 'Africa/Johannesburg' }
+];
+
+const SPOOF_STATE_PATH = path.join(ROOT_DIR, 'dll/system/geo-spoof-state.json');
+
+let spoofState = { enabled: false, countryCode: null, locationId: null };
+const spoofScriptIds = new Map(); // tabId -> CDP script identifier (Page.addScriptToEvaluateOnNewDocument)
+
+function loadSpoofState() {
+  try {
+    const raw = fs.readFileSync(SPOOF_STATE_PATH, 'utf-8');
+    const data = JSON.parse(raw);
+    return {
+      enabled: !!data.enabled,
+      countryCode: data.countryCode || null,
+      locationId: data.locationId || null
+    };
+  } catch (error) {
+    return { enabled: false, countryCode: null, locationId: null };
+  }
+}
+
+function saveSpoofState(state) {
+  try {
+    fs.mkdirSync(path.dirname(SPOOF_STATE_PATH), { recursive: true });
+    fs.writeFileSync(SPOOF_STATE_PATH, JSON.stringify(state), 'utf-8');
+  } catch (error) {
+    console.error('[GeoSpoof] Gagal nyimpen state:', error.message);
+  }
+}
+
+function spoofBuildAcceptLanguage(locale) {
+  const base = locale.split('-')[0];
+  if (base === 'en') {
+    return locale === 'en-US' ? 'en-US,en;q=0.9' : `${locale},en;q=0.9,en-US;q=0.6`;
+  }
+  return `${locale},${base};q=0.9,en-US;q=0.5`;
+}
+
+function spoofGetProfile(countryCode, locationId) {
+  if (!countryCode || !locationId) return null;
+  const loc = SPOOF_LOCATIONS.find((l) => l.id === locationId && l.country === countryCode);
+  const country = SPOOF_COUNTRIES.find((c) => c.code === countryCode);
+  if (!loc || !country) return null;
+  const locale = loc.locale || country.locale;
+  return {
+    countryCode,
+    countryName: country.name,
+    flag: country.flag,
+    locationId,
+    city: loc.city,
+    lat: loc.lat,
+    lng: loc.lng,
+    tz: loc.tz,
+    locale,
+    acceptLang: spoofBuildAcceptLanguage(locale)
+  };
+}
+
+// Script yang disuntik ke MAIN WORLD tiap tab (lewat CDP, bukan isolated
+// world preload) — geolocation & bahasa gak punya API native buat di-override
+// di Electron, jadi jalan satu-satunya ya patch langsung objek `navigator`
+// punya halaman itu sendiri.
+function spoofBuildInjectionScript(profile) {
+  const payload = {
+    lat: profile.lat,
+    lng: profile.lng,
+    lang: profile.locale,
+    langBase: profile.locale.split('-')[0]
+  };
+
+  return `(function() {
+    try {
+      var AKHTAR_GEO = ${JSON.stringify(payload)};
+
+      var fakePosition = function() {
+        return {
+          coords: {
+            latitude: AKHTAR_GEO.lat,
+            longitude: AKHTAR_GEO.lng,
+            accuracy: 20 + Math.random() * 15,
+            altitude: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null
+          },
+          timestamp: Date.now()
+        };
+      };
+
+      var fakeGeolocation = {
+        getCurrentPosition: function(success, error, options) {
+          setTimeout(function() {
+            try { success(fakePosition()); } catch (e) {}
+          }, 40 + Math.random() * 120);
+        },
+        watchPosition: function(success, error, options) {
+          try { success(fakePosition()); } catch (e) {}
+          return setInterval(function() {
+            try { success(fakePosition()); } catch (e) {}
+          }, 6000);
+        },
+        clearWatch: function(id) { clearInterval(id); }
+      };
+
+      try {
+        Object.defineProperty(window.navigator, 'geolocation', {
+          get: function() { return fakeGeolocation; },
+          configurable: true
+        });
+      } catch (e) {}
+
+      try {
+        Object.defineProperty(window.navigator, 'language', {
+          get: function() { return AKHTAR_GEO.lang; },
+          configurable: true
+        });
+        Object.defineProperty(window.navigator, 'languages', {
+          get: function() { return Object.freeze([AKHTAR_GEO.lang, AKHTAR_GEO.langBase]); },
+          configurable: true
+        });
+      } catch (e) {}
+    } catch (e) {}
+  })();`;
+}
+
+// Header Accept-Language + timezone level session — dipasang SEKALI aja pas
+// startup, isi headernya dibaca dari spoofState terkini tiap ada request.
+function spoofRegisterSessionHooks() {
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    if (spoofState.enabled) {
+      const profile = spoofGetProfile(spoofState.countryCode, spoofState.locationId);
+      if (profile) {
+        details.requestHeaders['Accept-Language'] = profile.acceptLang;
+      }
+    }
+    callback({ requestHeaders: details.requestHeaders });
+  });
+}
+
+function spoofApplySessionTimezone() {
+  const ses = session.defaultSession;
+  try {
+    if (typeof ses.setTimezoneOverride !== 'function') return;
+    if (spoofState.enabled) {
+      const profile = spoofGetProfile(spoofState.countryCode, spoofState.locationId);
+      if (profile) ses.setTimezoneOverride(profile.tz);
+    } else {
+      ses.setTimezoneOverride(''); // kosongin string = balik ke timezone OS asli
+    }
+  } catch (error) {
+    // Versi Electron lama gak punya API ini, aman diabaikan — geolocation &
+    // bahasa tetep ke-spoof, cuma timezone yang gak ikut ke-paksa.
+  }
+}
+
+async function spoofClearTab(tab) {
+  const wc = tab.view.webContents;
+  const scriptId = spoofScriptIds.get(tab.id);
+  spoofScriptIds.delete(tab.id);
+  if (!scriptId) return;
+  try {
+    if (wc.debugger.isAttached()) {
+      await wc.debugger.sendCommand('Page.removeScriptToEvaluateOnNewDocument', { identifier: scriptId });
+    }
+  } catch (error) { /* tab udah navigasi/ketutup, aman diabaikan */ }
+}
+
+async function spoofApplyToTab(tab) {
+  if (!tab || tab.view.webContents.isDestroyed()) return;
+  const wc = tab.view.webContents;
+
+  await spoofClearTab(tab);
+
+  if (!spoofState.enabled) return;
+
+  const profile = spoofGetProfile(spoofState.countryCode, spoofState.locationId);
+  if (!profile) return;
+
+  const script = spoofBuildInjectionScript(profile);
+
+  try {
+    if (!wc.debugger.isAttached()) {
+      wc.debugger.attach('1.3');
+    }
+    await wc.debugger.sendCommand('Page.enable');
+    const result = await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', { source: script });
+    if (result && result.identifier) {
+      spoofScriptIds.set(tab.id, result.identifier);
+    }
+  } catch (error) {
+    console.error('[GeoSpoof] Gagal pasang CDP script ke tab', tab.id, error.message);
+  }
+
+  // Suntik langsung ke halaman yang LAGI kebuka juga, biar efeknya kerasa
+  // instan tanpa nunggu user reload manual (CDP baru berlaku pas next-navigate).
+  try {
+    await wc.executeJavaScript(script);
+  } catch (error) { /* halaman belum siap, gapapa udah ke-cover CDP buat navigasi berikutnya */ }
+}
+
+async function spoofApplyToAllTabs() {
+  for (const tab of browserTabs) {
+    await spoofApplyToTab(tab);
+  }
+}
+
+// ---- IPC HANDLERS: GEOLOCATION & TIME SPOOFER ----
+
+ipcMain.handle('spoof-get-locations', () => {
+  return {
+    countries: SPOOF_COUNTRIES,
+    locations: SPOOF_LOCATIONS.map((l) => ({
+      id: l.id,
+      country: l.country,
+      city: l.city,
+      tz: l.tz
+    }))
+  };
+});
+
+ipcMain.handle('spoof-get-status', () => {
+  const profile = spoofState.enabled
+    ? spoofGetProfile(spoofState.countryCode, spoofState.locationId)
+    : null;
+  return { ...spoofState, profile };
+});
+
+ipcMain.handle('spoof-set', async (event, config) => {
+  const enabled = !!(config && config.enabled);
+  const countryCode = (config && config.countryCode) || null;
+  const locationId = (config && config.locationId) || null;
+
+  if (enabled && !spoofGetProfile(countryCode, locationId)) {
+    return { ok: false, error: 'Negara/lokasi yang dipilih gak valid.' };
+  }
+
+  spoofState = { enabled, countryCode, locationId };
+  saveSpoofState(spoofState);
+
+  spoofApplySessionTimezone();
+  await spoofApplyToAllTabs();
+
+  const profile = enabled ? spoofGetProfile(countryCode, locationId) : null;
+  return { ok: true, enabled, profile };
 });
