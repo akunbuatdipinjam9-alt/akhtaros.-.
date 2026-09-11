@@ -2507,6 +2507,60 @@
 ` },
             { id: 'terminal', name: 'Terminal', icon: 'fa-terminal', color: 'text-green-400', type: 'native', desktop: true, ram: 200, winWidth: '700px', winHeight: '450px', html: '<div id="term-root" style="display:flex;flex-direction:column;height:100%;background:#0c0c0c;color:#0f0;font-family:monospace;font-size:13px;"></div>' },
 
+            { id: 'datapoisoning', name: 'Data Poisoning Engine', icon: 'fa-skull-crossbones', color: 'text-red-400', type: 'native', desktop: true, ram: 140, winWidth: '640px', winHeight: '560px', html: `
+<style>
+.poison-wrap { display:flex; flex-direction:column; height:100%; font-family:'Segoe UI',sans-serif; font-size:13px; background:#0f0f11; color:#e4e4e7; }
+.poison-header { padding:14px 16px; background:#18181b; border-bottom:1px solid #27272a; }
+.poison-toggle-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.poison-switch { position:relative; width:46px; height:26px; background:#3f3f46; border-radius:999px; cursor:pointer; transition:background .2s; flex-shrink:0; }
+.poison-switch.on { background:#dc2626; }
+.poison-switch .knob { position:absolute; top:3px; left:3px; width:20px; height:20px; background:#fff; border-radius:50%; transition:transform .2s; }
+.poison-switch.on .knob { transform:translateX(20px); }
+.poison-stats { display:flex; gap:10px; margin-top:12px; }
+.poison-stat { flex:1; background:#0f0f11; border:1px solid #27272a; border-radius:8px; padding:8px 10px; text-align:center; }
+.poison-stat .num { font-size:18px; font-weight:700; color:#f87171; }
+.poison-stat .lbl { font-size:10px; color:#a1a1aa; margin-top:2px; }
+.poison-auto-row { display:flex; align-items:center; gap:6px; margin-top:10px; font-size:11px; color:#a1a1aa; }
+.poison-log { flex:1; overflow-y:auto; padding:10px 14px; }
+.poison-log-item { display:flex; flex-direction:column; gap:2px; padding:8px 10px; margin-bottom:6px; background:#18181b; border:1px solid #27272a; border-radius:7px; font-size:11px; }
+.poison-log-item .top { display:flex; justify-content:space-between; color:#a1a1aa; font-size:10px; }
+.poison-log-item .body { color:#e4e4e7; word-break:break-word; }
+.poison-log-item .fp { margin-top:4px; font-size:10px; color:#71717a; }
+.poison-badge { font-size:9px; padding:1px 6px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
+.poison-badge.google { background:#1e3a8a; color:#bfdbfe; }
+.poison-badge.wikipedia-random { background:#3f3f46; color:#d4d4d8; }
+.poison-badge.reddit-random { background:#7c2d12; color:#fed7aa; }
+.poison-badge.youtube { background:#7f1d1d; color:#fecaca; }
+.poison-badge.ecommerce { background:#78350f; color:#fde68a; }
+.poison-badge.news { background:#1e293b; color:#cbd5e1; }
+.poison-badge.engine { background:#166534; color:#bbf7d0; }
+.poison-empty { text-align:center; color:#52525b; padding:30px 10px; font-size:12px; }
+</style>
+<div class="poison-wrap">
+  <div class="poison-header">
+    <div class="poison-toggle-row">
+      <div>
+        <div style="font-weight:600;font-size:14px;">Data Poisoning Engine</div>
+        <div style="font-size:11px;color:#a1a1aa;margin-top:2px;">18 fingerprint (browser × negara × device) · 15 pool bahasa</div>
+      </div>
+      <div id="poison-switch" class="poison-switch" onclick="poisonToggle()"><div class="knob"></div></div>
+    </div>
+    <div class="poison-stats">
+      <div class="poison-stat"><div class="num" id="poison-stat-sessions">0</div><div class="lbl">Sesi Ghost</div></div>
+      <div class="poison-stat"><div class="num" id="poison-stat-queries">0</div><div class="lbl">Query Palsu</div></div>
+      <div class="poison-stat"><div class="num" id="poison-stat-status">OFF</div><div class="lbl">Status</div></div>
+    </div>
+    <label class="poison-auto-row">
+      <input type="checkbox" id="poison-auto-check" onchange="poisonAutoToggle(this.checked)">
+      Auto-nyala tiap Global Incognito aktif
+    </label>
+  </div>
+  <div id="poison-log" class="poison-log">
+    <div class="poison-empty">Belum ada aktivitas ghost session.<br>Nyalain toggle di atas buat mulai.</div>
+  </div>
+</div>
+` },
+
             // Tor Browser bukan panel internal Akhtar OS — dia app eksternal asli.
             // Makanya gak punya "html" kayak app native lain; klik icon ini di-intercept
             // di openWindow() dan langsung spawn proses Tor Browser aslinya (lihat launchTorBrowserFromDesktop).
@@ -3774,6 +3828,33 @@
                                     <span style="font-size:10px;background:rgba(167,139,250,0.15);color:#c4b5fd;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-check"></i> No cookies</span>
                                     <span style="font-size:10px;background:rgba(167,139,250,0.15);color:#c4b5fd;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-check"></i> No cache</span>
                                     <span style="font-size:10px;background:rgba(34,211,238,0.15);color:#67e8f9;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-shield-halved"></i> Auto DoH</span>
+                                </div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,#0c2340,#0e3a5f);padding:14px;border-radius:8px;border:1px solid #38bdf8;margin-bottom:14px;">
+                                <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+                                    <i class="fa-solid fa-earth-asia" style="font-size:28px;color:#38bdf8;"></i>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:bold;font-size:13px;color:#fff;">Geolocation & Time Spoofer</div>
+                                        <div style="font-size:11px;color:#93c5fd;">Ngasih lokasi, timezone & bahasa palsu ke semua web yang dibuka di browser — 27 negara, 100+ kota.</div>
+                                    </div>
+                                    <div class="toggle-switch" id="spoof-toggle" onclick="spoofToggle()"></div>
+                                </div>
+                                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                                    <select id="spoof-country-select" onchange="spoofOnCountryChange()" style="flex:1;padding:8px;border-radius:6px;border:1px solid #1e5a8a;background:#08192e;color:#e0f2fe;font-size:12px;outline:none;">
+                                        <option value="">Pilih negara...</option>
+                                    </select>
+                                    <select id="spoof-location-select" onchange="spoofApply()" style="flex:1;padding:8px;border-radius:6px;border:1px solid #1e5a8a;background:#08192e;color:#e0f2fe;font-size:12px;outline:none;" disabled>
+                                        <option value="">Pilih kota...</option>
+                                    </select>
+                                </div>
+                                <div id="spoof-status-box" style="font-size:11px;color:#7dd3fc;background:rgba(0,0,0,0.25);border-radius:6px;padding:9px 10px;display:none;">
+                                    <div id="spoof-status-line1" style="color:#fff;font-weight:600;margin-bottom:3px;"></div>
+                                    <div id="spoof-status-line2"></div>
+                                </div>
+                                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+                                    <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-location-dot"></i> GPS palsu</span>
+                                    <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-clock"></i> Timezone ikut lokasi</span>
+                                    <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-language"></i> Bahasa ikut lokasi</span>
                                 </div>
                             </div>
                             <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
@@ -9698,6 +9779,9 @@ void loop() {
             if (appId === 'browser' && window.akhtarBrowser) {
                 setTimeout(initNativeBrowserWindow, 60);
             }
+            if (appId === 'datapoisoning' && typeof poisonPanelInit === 'function') {
+                setTimeout(poisonPanelInit, 60);
+            }
             if (appId === 'realfiles') {
                 setTimeout(rfInit, 30);
             }
@@ -10845,6 +10929,9 @@ void loop() {
             }
             if (tabName === 'notifhistory') {
                 setTimeout(function(){ if (typeof initNotifSettingsUI === 'function') initNotifSettingsUI(); }, 30);
+            }
+            if (tabName === 'privacy') {
+                setTimeout(function(){ if (typeof spoofInit === 'function') spoofInit(); }, 30);
             }
         }
 
@@ -23973,8 +24060,8 @@ if (_origAddNotif) {
 <script>
 // ========== PLUGIN STORE & INDEXEDDB SYSTEM ==========
 (function() {
-    const SUPABASE_URL = 'contoh supabase';
-    const SUPABASE_KEY = 'lu siapa jir pake supabase sendiri sana';
+    const SUPABASE_URL = 'https://sxcvmrpcsrfsnyrwbkmb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4Y3ZtcnBjc3Jmc255cndia21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0Nzg2MDYsImV4cCI6MjA4ODA1NDYwNn0.EhhWM4a6mwEqsqzB7-MJOr8vuqr7gpQfZV7egdpYiL4';
     const MAX_INSTALLED = 5;
     const DB_NAME = 'AkhtarPlugins';
     const STORE_NAME = 'installed';
@@ -24069,7 +24156,7 @@ if (_origAddNotif) {
 
     // ---- Supabase fetch helpers ----
     async function fetchPlugins() {
-        const res = await fetch(SUPABASE_URL + 'apa kek', {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/plugins?banned=eq.false&select=*,plugin_screenshots(*)&order=created_at.desc', {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
         return res.json();
@@ -29520,6 +29607,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         @keyframes incognitoPulse {
             0%,100% { opacity: 1; } 50% { opacity: 0.55; }
         }
+    </style>
     <!-- ================================================================
          APP SANDBOX MANAGER
          Layer manajemen isolasi per-app: level (1-4), permission toggle,
@@ -29811,6 +29899,319 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         syncSandboxNavBadge();
 
         window.__appSandboxReady = true;
+    })();
+    </script>
+
+    <script>
+    // ==================================
+    // DATA POISONING ENGINE — UI GLUE
+    // ==================================
+    (function() {
+        let poisonLogCache = [];
+        let poisonAutoFollow = (localStorage.getItem('poisonAutoFollow') === '1');
+        let poisonLastIncognito = false;
+
+        function poisonHasBridge() {
+            return !!(window.akhtarPoison && window.akhtarPoison.start);
+        }
+
+        function poisonTimeAgo(ts) {
+            const diff = Math.max(0, Date.now() - ts);
+            const s = Math.floor(diff / 1000);
+            if (s < 60) return s + 'd lalu';
+            const m = Math.floor(s / 60);
+            if (m < 60) return m + 'm lalu';
+            const h = Math.floor(m / 60);
+            return h + 'j lalu';
+        }
+
+        function poisonFlagFor(country) {
+            const flags = { ID: '🇮🇩', US: '🇺🇸', ES: '🇪🇸', MX: '🇲🇽', BR: '🇧🇷', DE: '🇩🇪', FR: '🇫🇷', JP: '🇯🇵', KR: '🇰🇷' };
+            return flags[country] || '🌐';
+        }
+
+        function poisonDeviceIcon(device) {
+            if (device === 'mobile') return '📱 Mobile';
+            if (device === 'tablet') return '📱 Tablet';
+            return '🖥️ Desktop';
+        }
+
+        function poisonLabelFor(type) {
+            if (type === 'google-search') return { badge: 'google', text: 'Google Search' };
+            if (type === 'youtube-search') return { badge: 'youtube', text: 'YouTube Search' };
+            if (type === 'ecommerce-search') return { badge: 'ecommerce', text: 'E-commerce' };
+            if (type === 'news-browse') return { badge: 'news', text: 'Baca Berita' };
+            if (type === 'wikipedia-random') return { badge: 'wikipedia-random', text: 'Wikipedia Random' };
+            if (type === 'wikipedia-search') return { badge: 'wikipedia-random', text: 'Wikipedia Search' };
+            if (type === 'reddit-random') return { badge: 'reddit-random', text: 'Reddit Random' };
+            return { badge: 'engine', text: 'Engine' };
+        }
+
+        function poisonRenderLog() {
+            const el = document.getElementById('poison-log');
+            if (!el) return;
+
+            if (!poisonLogCache.length) {
+                el.innerHTML = '<div class="poison-empty">Belum ada aktivitas ghost session.<br>Nyalain toggle di atas buat mulai.</div>';
+                return;
+            }
+
+            el.innerHTML = poisonLogCache.map(function(entry) {
+                const lbl = poisonLabelFor(entry.type);
+                let bodyText = '';
+                if (entry.type === 'engine') {
+                    bodyText = entry.status === 'engine-started' ? 'Engine dinyalain — sesi ghost pertama segera jalan.' : 'Engine dimatiin.';
+                } else if (entry.status === 'started') {
+                    bodyText = entry.query ? ('Nyari: "' + entry.query + '"') : ('Buka halaman: ' + entry.url);
+                } else if (entry.status === 'done') {
+                    bodyText = 'Kelar baca & scroll-scroll halaman ini.';
+                } else if (entry.status === 'error') {
+                    bodyText = 'Gagal jalanin sesi (' + (entry.error || 'unknown') + ')';
+                } else if (entry.status === 'blocked') {
+                    bodyText = 'Kena captcha/unusual-traffic — domain ini di-skip sementara (' + (entry.domain || 'unknown') + ').';
+                }
+                const fp = entry.fingerprint;
+                const fpText = fp ? (poisonFlagFor(fp.country) + ' ' + fp.country + ' · ' + fp.lang.toUpperCase() + ' · ' + poisonDeviceIcon(fp.device)) : '';
+
+                return '<div class="poison-log-item">' +
+                    '<div class="top"><span class="poison-badge ' + lbl.badge + '">' + lbl.text + '</span><span>' + poisonTimeAgo(entry.time) + '</span></div>' +
+                    '<div class="body">' + bodyText.replace(/</g, '&lt;') + '</div>' +
+                    (fpText ? '<div class="fp">' + fpText + '</div>' : '') +
+                    '</div>';
+            }).join('');
+        }
+
+        function poisonRenderStatus(status) {
+            const sw = document.getElementById('poison-switch');
+            const statEl = document.getElementById('poison-stat-status');
+            const sessEl = document.getElementById('poison-stat-sessions');
+            const qEl = document.getElementById('poison-stat-queries');
+            if (!sw) return;
+
+            sw.classList.toggle('on', !!status.active);
+            if (statEl) statEl.textContent = status.active ? 'ON' : 'OFF';
+            if (sessEl) sessEl.textContent = status.sessionCount || 0;
+            if (qEl) qEl.textContent = status.queryCount || 0;
+
+            if (status.log) {
+                poisonLogCache = status.log;
+                poisonRenderLog();
+            }
+        }
+
+        window.poisonToggle = async function() {
+            if (!poisonHasBridge()) {
+                alert('Data Poisoning Engine cuma jalan di dalam aplikasi Electron Akhtar OS (butuh preload.js akhtarPoison).');
+                return;
+            }
+            const sw = document.getElementById('poison-switch');
+            const isOn = sw && sw.classList.contains('on');
+            const status = isOn ? await window.akhtarPoison.stop() : await window.akhtarPoison.start();
+            poisonRenderStatus(status);
+        };
+
+        window.poisonAutoToggle = function(checked) {
+            poisonAutoFollow = !!checked;
+            localStorage.setItem('poisonAutoFollow', poisonAutoFollow ? '1' : '0');
+        };
+
+        async function poisonPanelInit() {
+            const check = document.getElementById('poison-auto-check');
+            if (check) check.checked = poisonAutoFollow;
+
+            if (!poisonHasBridge()) {
+                poisonRenderStatus({ active: false, sessionCount: 0, queryCount: 0, log: [] });
+                return;
+            }
+
+            const status = await window.akhtarPoison.status();
+            poisonRenderStatus(status);
+
+            if (window.akhtarPoison.onActivity && !window.__poisonListenerBound) {
+                window.__poisonListenerBound = true;
+                window.akhtarPoison.onActivity(function(entry) {
+                    poisonLogCache.unshift(entry);
+                    if (poisonLogCache.length > 30) poisonLogCache = poisonLogCache.slice(0, 30);
+                    window.akhtarPoison.status().then(poisonRenderStatus).catch(function() { poisonRenderLog(); });
+                });
+            }
+        }
+
+        window.poisonPanelInit = poisonPanelInit;
+
+        // Auto-follow Global Incognito: cek tiap detik (pola sama kayak syncSandboxNavBadge di atas)
+        setInterval(function() {
+            if (!poisonAutoFollow || !poisonHasBridge()) return;
+            const nowIncognito = !!window.incognitoMode;
+            if (nowIncognito !== poisonLastIncognito) {
+                poisonLastIncognito = nowIncognito;
+                if (nowIncognito) {
+                    window.akhtarPoison.start().then(function(status) {
+                        if (document.getElementById('poison-switch')) poisonRenderStatus(status);
+                    });
+                } else {
+                    window.akhtarPoison.stop().then(function(status) {
+                        if (document.getElementById('poison-switch')) poisonRenderStatus(status);
+                    });
+                }
+            }
+        }, 1000);
+    })();
+    </script>
+
+    <script>
+    // ==================================
+    // GEOLOCATION & TIME SPOOFER — UI GLUE
+    // ==================================
+    (function() {
+        let spoofData = null;      // { countries, locations } dari main process
+        let spoofClockTimer = null;
+
+        function spoofHasBridge() {
+            return !!(window.akhtarSpoof && window.akhtarSpoof.getLocations);
+        }
+
+        async function spoofEnsureData() {
+            if (spoofData) return spoofData;
+            spoofData = await window.akhtarSpoof.getLocations();
+            return spoofData;
+        }
+
+        function spoofPopulateCountries(selectedCode) {
+            const sel = document.getElementById('spoof-country-select');
+            if (!sel || !spoofData) return;
+            sel.innerHTML = '<option value="">Pilih negara...</option>' +
+                spoofData.countries.map(c =>
+                    `<option value="${c.code}" ${c.code === selectedCode ? 'selected' : ''}>${c.flag} ${c.name}</option>`
+                ).join('');
+        }
+
+        function spoofPopulateLocations(countryCode, selectedId) {
+            const sel = document.getElementById('spoof-location-select');
+            if (!sel || !spoofData) return;
+            const locs = spoofData.locations.filter(l => l.country === countryCode);
+            if (!countryCode || !locs.length) {
+                sel.innerHTML = '<option value="">Pilih kota...</option>';
+                sel.disabled = true;
+                return;
+            }
+            sel.disabled = false;
+            sel.innerHTML = '<option value="">Pilih kota...</option>' +
+                locs.map(l =>
+                    `<option value="${l.id}" ${l.id === selectedId ? 'selected' : ''}>${l.city}</option>`
+                ).join('');
+        }
+
+        function spoofStopClock() {
+            if (spoofClockTimer) { clearInterval(spoofClockTimer); spoofClockTimer = null; }
+        }
+
+        function spoofRenderStatus(status) {
+            const toggle = document.getElementById('spoof-toggle');
+            const box = document.getElementById('spoof-status-box');
+            const line1 = document.getElementById('spoof-status-line1');
+            const line2 = document.getElementById('spoof-status-line2');
+
+            spoofStopClock();
+
+            if (toggle) toggle.classList.toggle('on', !!status.enabled);
+
+            if (!status.enabled || !status.profile) {
+                if (box) box.style.display = 'none';
+                return;
+            }
+
+            const p = status.profile;
+            if (box) box.style.display = 'block';
+
+            const renderClock = () => {
+                let timeStr = '--:--:--';
+                try {
+                    timeStr = new Intl.DateTimeFormat('id-ID', {
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        timeZone: p.tz
+                    }).format(new Date());
+                } catch (e) {}
+                if (line1) line1.textContent = `${p.flag} ${p.city}, ${p.countryName}`;
+                if (line2) line2.textContent = `${p.tz} · ${timeStr} · Bahasa: ${p.locale}`;
+            };
+
+            renderClock();
+            spoofClockTimer = setInterval(renderClock, 1000);
+        }
+
+        window.spoofOnCountryChange = function() {
+            const countrySel = document.getElementById('spoof-country-select');
+            if (!countrySel) return;
+            spoofPopulateLocations(countrySel.value, null);
+        };
+
+        window.spoofApply = async function() {
+            if (!spoofHasBridge()) return;
+            const toggle = document.getElementById('spoof-toggle');
+            const countrySel = document.getElementById('spoof-country-select');
+            const locSel = document.getElementById('spoof-location-select');
+            if (!toggle || !countrySel || !locSel) return;
+
+            const enabled = toggle.classList.contains('on');
+            const countryCode = countrySel.value || null;
+            const locationId = locSel.value || null;
+
+            if (enabled && (!countryCode || !locationId)) {
+                // Belum lengkap milih lokasi — jangan kirim ke main process dulu.
+                return;
+            }
+
+            try {
+                const result = await window.akhtarSpoof.setConfig({ enabled, countryCode, locationId });
+                if (result && result.ok) {
+                    spoofRenderStatus(result);
+                } else if (result && result.error) {
+                    alert(result.error);
+                }
+            } catch (e) {
+                console.error('[GeoSpoof] Gagal apply config:', e);
+            }
+        };
+
+        window.spoofToggle = async function() {
+            const toggle = document.getElementById('spoof-toggle');
+            const countrySel = document.getElementById('spoof-country-select');
+            const locSel = document.getElementById('spoof-location-select');
+            if (!toggle) return;
+
+            const turningOn = !toggle.classList.contains('on');
+
+            if (turningOn && (!countrySel.value || !locSel.value)) {
+                alert('Pilih negara & kota dulu sebelum nyalain spoofer.');
+                return;
+            }
+
+            toggle.classList.toggle('on');
+            await window.spoofApply();
+        };
+
+        async function spoofInit() {
+            const box = document.getElementById('spoof-status-box');
+            if (!spoofHasBridge()) {
+                if (box) {
+                    box.style.display = 'block';
+                    const l1 = document.getElementById('spoof-status-line1');
+                    if (l1) l1.textContent = 'Modul spoofer gak tersedia (buka lewat app Electron, bukan browser biasa).';
+                }
+                return;
+            }
+
+            await spoofEnsureData();
+
+            const status = await window.akhtarSpoof.getStatus();
+
+            spoofPopulateCountries(status.countryCode);
+            spoofPopulateLocations(status.countryCode, status.locationId);
+            spoofRenderStatus(status);
+        }
+
+        window.spoofInit = spoofInit;
     })();
     </script>
 
