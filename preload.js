@@ -586,3 +586,42 @@ contextBridge.exposeInMainWorld('akhtarHardware', {
     // modeKey: 'eco' | 'standard' | 'ultimate' | 'optimized' (cuma ASUS)
     setGPUMode: (modeKey) => ipcRenderer.invoke('hw-set-gpu-mode', modeKey)
 });
+
+// ==================================
+// DATA POISONING ENGINE API
+// ==================================
+
+// ==================================
+// GEOLOCATION & TIME SPOOFER API
+// ==================================
+
+contextBridge.exposeInMainWorld('akhtarSpoof', {
+  // Ambil daftar negara (27) + lokasi (100+) yang tersedia buat dipilih
+  getLocations: () => ipcRenderer.invoke('spoof-get-locations'),
+
+  // Ambil status sekarang: { enabled, countryCode, locationId, profile }
+  getStatus: () => ipcRenderer.invoke('spoof-get-status'),
+
+  // Nyalain/matiin + pilih negara & lokasi.
+  // config = { enabled: bool, countryCode: 'JP', locationId: 'jp-tokyo' }
+  // Balikin { ok, enabled, profile } atau { ok:false, error } kalau gak valid.
+  setConfig: (config) => ipcRenderer.invoke('spoof-set', config)
+});
+
+contextBridge.exposeInMainWorld('akhtarPoison', {
+    // Nyalain engine — mulai spawn ghost session secara berkala
+    start: () => ipcRenderer.invoke('poison-start'),
+
+    // Matiin engine — stop scheduler + destroy ghost window yang lagi jalan (kalau ada)
+    stop: () => ipcRenderer.invoke('poison-stop'),
+
+    // Status sekarang: { active, sessionCount, queryCount, log }
+    status: () => ipcRenderer.invoke('poison-status'),
+
+    // Live feed tiap ada aktivitas baru (sesi mulai/selesai/error, engine on/off)
+    onActivity: (callback) => {
+        const listener = (event, entry) => callback(entry);
+        ipcRenderer.on('poison-activity', listener);
+        return () => ipcRenderer.removeListener('poison-activity', listener);
+    }
+});
