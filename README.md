@@ -219,7 +219,7 @@ text
 akhtar-os/
 ├── main.js                 # Backend Electron (kernel OS)
 ├── preload.js              # Bridge antara Electron & HTML
-├── my-os-1.html            # Frontend utama (10.000+ baris!)
+├── my-os-1.html            # Frontend utama (30.818+ baris!)
 ├── icon.ico                # Icon OS
 ├── package.json            # Dependency + script
 │
