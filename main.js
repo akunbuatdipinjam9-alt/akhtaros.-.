@@ -399,6 +399,108 @@ let tabIdCounter = 0;
 
 const HOMEPAGE_URL = 'https://www.google.com';
 
+// ==================================
+// SEARCH ENGINES
+// ==================================
+// Daftar mesin pencari yang bisa dipilih user buat Easy Browser.
+// "home"  -> dipakai tombol Home / homepage tab baru
+// "build" -> ngebentuk URL hasil pencarian dari query mentah user
+const SEARCH_ENGINES = {
+  google: {
+    id: 'google',
+    name: 'Google',
+    icon: 'fa-brands fa-google',
+    home: 'https://www.google.com',
+    build: (q) => 'https://www.google.com/search?q=' + encodeURIComponent(q)
+  },
+  bing: {
+    id: 'bing',
+    name: 'Microsoft Bing',
+    icon: 'fa-brands fa-microsoft',
+    home: 'https://www.bing.com',
+    build: (q) => 'https://www.bing.com/search?q=' + encodeURIComponent(q)
+  },
+  duckduckgo: {
+    id: 'duckduckgo',
+    name: 'DuckDuckGo',
+    icon: 'fa-brands fa-d-and-d',
+    home: 'https://duckduckgo.com',
+    build: (q) => 'https://duckduckgo.com/?q=' + encodeURIComponent(q)
+  },
+  yahoo: {
+    id: 'yahoo',
+    name: 'Yahoo! Search',
+    icon: 'fa-brands fa-yahoo',
+    home: 'https://www.yahoo.com',
+    build: (q) => 'https://search.yahoo.com/search?p=' + encodeURIComponent(q)
+  },
+  yandex: {
+    id: 'yandex',
+    name: 'Yandex',
+    icon: 'fa-solid fa-magnifying-glass',
+    home: 'https://yandex.com',
+    build: (q) => 'https://yandex.com/search/?text=' + encodeURIComponent(q)
+  },
+  baidu: {
+    id: 'baidu',
+    name: 'Baidu',
+    icon: 'fa-solid fa-magnifying-glass',
+    home: 'https://www.baidu.com',
+    build: (q) => 'https://www.baidu.com/s?wd=' + encodeURIComponent(q)
+  },
+  ecosia: {
+    id: 'ecosia',
+    name: 'Ecosia',
+    icon: 'fa-solid fa-leaf',
+    home: 'https://www.ecosia.org',
+    build: (q) => 'https://www.ecosia.org/search?q=' + encodeURIComponent(q)
+  },
+  brave: {
+    id: 'brave',
+    name: 'Brave Search',
+    icon: 'fa-brands fa-brave',
+    home: 'https://search.brave.com',
+    build: (q) => 'https://search.brave.com/search?q=' + encodeURIComponent(q)
+  },
+  startpage: {
+    id: 'startpage',
+    name: 'Startpage',
+    icon: 'fa-solid fa-magnifying-glass',
+    home: 'https://www.startpage.com',
+    build: (q) => 'https://www.startpage.com/sp/search?query=' + encodeURIComponent(q)
+  }
+};
+
+const DEFAULT_SEARCH_ENGINE = 'google';
+let currentSearchEngine = DEFAULT_SEARCH_ENGINE;
+
+function getSearchEngine() {
+  return SEARCH_ENGINES[currentSearchEngine] || SEARCH_ENGINES[DEFAULT_SEARCH_ENGINE];
+}
+
+function getSearchEngineList() {
+  return Object.values(SEARCH_ENGINES).map((e) => ({
+    id: e.id,
+    name: e.name,
+    icon: e.icon
+  }));
+}
+
+function setSearchEngine(id) {
+  if (!SEARCH_ENGINES[id]) {
+    return getSearchEngine().id;
+  }
+
+  currentSearchEngine = id;
+  saveBrowserData();
+
+  return getSearchEngine().id;
+}
+
+function getHomepageUrl() {
+  return getSearchEngine().home || HOMEPAGE_URL;
+}
+
 const browserDataPath = path.join(
   app.getPath('userData'),
   'browser-data.json'
@@ -413,9 +515,13 @@ function loadBrowserData() {
     const data = JSON.parse(raw);
     browserHistory = Array.isArray(data.history) ? data.history : [];
     browserBookmarks = Array.isArray(data.bookmarks) ? data.bookmarks : [];
+    currentSearchEngine = SEARCH_ENGINES[data.searchEngine]
+      ? data.searchEngine
+      : DEFAULT_SEARCH_ENGINE;
   } catch (error) {
     browserHistory = [];
     browserBookmarks = [];
+    currentSearchEngine = DEFAULT_SEARCH_ENGINE;
   }
 }
 
@@ -425,7 +531,8 @@ function saveBrowserData() {
       browserDataPath,
       JSON.stringify({
         history: browserHistory,
-        bookmarks: browserBookmarks
+        bookmarks: browserBookmarks,
+        searchEngine: currentSearchEngine
       }),
       'utf-8'
     );
@@ -470,6 +577,40 @@ function findTab(id) {
 // CREATE TAB
 // ==================================
 
+function buildBrowserErrorPage(url, errorCode, errorDescription) {
+  const safeUrl = String(url || '').replace(/[<>&"]/g, (c) => ({
+    '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'
+  }[c]));
+  const safeDesc = String(errorDescription || 'Gagal memuat halaman').replace(/[<>&"]/g, (c) => ({
+    '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;'
+  }[c]));
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Gagal memuat halaman</title>
+<style>
+  body { margin:0; font-family:'Segoe UI',Arial,sans-serif; background:#202124; color:#e8eaed;
+    display:flex; align-items:center; justify-content:center; height:100vh; }
+  .box { max-width:480px; padding:32px; text-align:center; }
+  .icon { font-size:48px; margin-bottom:16px; opacity:0.7; }
+  h1 { font-size:20px; font-weight:400; margin:0 0 8px; }
+  p { font-size:13px; color:#9aa0a6; margin:0 0 4px; word-break:break-all; }
+  .code { font-size:11px; color:#5f6368; margin-top:12px; }
+  a.retry { display:inline-block; margin-top:20px; padding:9px 18px; border-radius:20px;
+    background:#3b82f6; color:white; text-decoration:none; font-size:13px; }
+  a.retry:hover { background:#2563eb; }
+</style></head>
+<body>
+  <div class="box">
+    <div class="icon">&#9888;</div>
+    <h1>Halaman gak bisa dibuka</h1>
+    <p>${safeUrl}</p>
+    <p>${safeDesc}</p>
+    <div class="code">Kode error: ${errorCode}</div>
+    <a class="retry" href="${safeUrl}">Coba lagi</a>
+  </div>
+</body></html>`;
+}
+
 function createTab(url, incognito) {
   if (!win || win.isDestroyed()) {
     return null;
@@ -501,7 +642,7 @@ function createTab(url, incognito) {
     view.setBounds(browserBounds);
   }
 
-  view.webContents.loadURL(url || HOMEPAGE_URL);
+  view.webContents.loadURL(url || getHomepageUrl());
 
   view.webContents.on('did-navigate', () => {
     addHistoryEntry(view, tab);
@@ -530,20 +671,39 @@ function createTab(url, incognito) {
 
   view.webContents.on(
     'did-fail-load',
-    (event, errorCode, errorDescription, validatedURL) => {
+    (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      // Abaikan kegagalan di subframe (iklan/embed dsb) dan ERR_ABORTED (-3),
+      // yang biasanya cuma efek samping navigasi normal (redirect/klik link baru),
+      // bukan kegagalan beneran.
+      if (isMainFrame === false || errorCode === -3) {
+        return;
+      }
+
       console.error('=================================');
       console.error('BROWSER GAGAL MEMUAT');
       console.error('Error Code:', errorCode);
       console.error('Description:', errorDescription);
       console.error('URL:', validatedURL);
       console.error('=================================');
+
+      const errorHtml = buildBrowserErrorPage(validatedURL, errorCode, errorDescription);
+      view.webContents.loadURL(
+        'data:text/html;charset=utf-8,' + encodeURIComponent(errorHtml)
+      );
+
       sendBrowserState();
     }
   );
 
-  view.webContents.setWindowOpenHandler(({ url: popupUrl }) => {
+  view.webContents.setWindowOpenHandler(({ url: popupUrl, disposition }) => {
     if (popupUrl) {
-      view.webContents.loadURL(popupUrl);
+      if (disposition === 'foreground-tab' || disposition === 'background-tab' || disposition === 'new-window') {
+        // Link yang minta dibuka di tab/jendela baru (target="_blank", window.open,
+        // dsb) beneran dibukain tab baru di Easy Browser, bukan ke-load nimpa tab ini.
+        newTab(popupUrl, tab.incognito);
+      } else {
+        view.webContents.loadURL(popupUrl);
+      }
     }
     return { action: 'deny' };
   });
@@ -602,7 +762,7 @@ function showBrowser() {
   let active = getActiveTab();
 
   if (!active) {
-    active = createTab(HOMEPAGE_URL, false);
+    active = createTab(getHomepageUrl(), false);
     if (!active) return false;
     activeTabId = active.id;
   }
@@ -671,7 +831,7 @@ function newTab(url, incognito) {
     return null;
   }
 
-  const tab = createTab(url || HOMEPAGE_URL, incognito);
+  const tab = createTab(url || getHomepageUrl(), incognito);
 
   if (!tab) {
     return null;
@@ -761,13 +921,18 @@ function navigateBrowser(input) {
     return true;
   }
 
+  // Alamat IPv4 (opsional dengan port/path), misal 192.168.1.1 atau 127.0.0.1:8080/app
+  if (/^(\d{1,3}\.){3}\d{1,3}(?::\d+)?(?:\/.*)?$/.test(value)) {
+    active.view.webContents.loadURL(`http://${value}`);
+    return true;
+  }
+
   if (/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(value)) {
     active.view.webContents.loadURL(`https://${value}`);
     return true;
   }
 
-  const searchURL =
-    'https://www.google.com/search?q=' + encodeURIComponent(value);
+  const searchURL = getSearchEngine().build(value);
 
   active.view.webContents.loadURL(searchURL);
 
@@ -918,7 +1083,7 @@ ipcMain.handle('browser-stop', () => {
 });
 
 ipcMain.handle('browser-home', () => {
-  const active = getActiveTab() || createTab(HOMEPAGE_URL, false);
+  const active = getActiveTab() || createTab(getHomepageUrl(), false);
 
   if (!active) {
     return false;
@@ -928,7 +1093,7 @@ ipcMain.handle('browser-home', () => {
     activeTabId = active.id;
   }
 
-  active.view.webContents.loadURL(HOMEPAGE_URL);
+  active.view.webContents.loadURL(getHomepageUrl());
 
   return true;
 });
@@ -966,96 +1131,26 @@ ipcMain.handle('browser-bookmark-list', () => bookmarkList());
 ipcMain.handle('browser-bookmark-add', (event, url, title) => bookmarkAdd(url, title));
 ipcMain.handle('browser-bookmark-remove', (event, id) => bookmarkRemove(id));
 
-// ==================================
-// POWERGUARD EXTENSION
-// ==================================
+// Daftar mesin pencari yang tersedia buat dipilih di Settings > Browser
+ipcMain.handle('browser-search-engines-list', () => getSearchEngineList());
 
-ipcMain.handle('browser-extension-status', () => {
-  return {
-    loaded: !!loadedExtension,
-    id: loadedExtension ? loadedExtension.id : null,
-    name: loadedExtension ? loadedExtension.name : null,
-    version: loadedExtension ? loadedExtension.version : null
-  };
+// Mesin pencari yang lagi aktif dipakai
+ipcMain.handle('browser-search-engine-get', () => getSearchEngine().id);
+
+// Info lengkap mesin pencari aktif: { id, name, icon }
+ipcMain.handle('browser-search-engine-info', () => {
+  const e = getSearchEngine();
+  return { id: e.id, name: e.name, icon: e.icon };
 });
 
-// Ambil preferensi on/off yang tersimpan + status aktual sekarang.
-// "enabled" itu pilihan usernya, "loaded" itu kondisi nyatanya di session
-// (biar UI bisa ngebedain "off karena user matiin" vs "harusnya on tapi gagal load").
-ipcMain.handle('browser-extension-enabled-get', () => {
-  const state = loadPowerGuardState();
-  return {
-    enabled: state.enabled,
-    loaded: !!loadedExtension,
-    id: loadedExtension ? loadedExtension.id : null,
-    name: loadedExtension ? loadedExtension.name : null,
-    version: loadedExtension ? loadedExtension.version : null
-  };
+// Bentuk URL pencarian dari query mentah, pakai mesin pencari yang lagi aktif.
+// Dipakai juga sama Spotlight & Hot Corner Search biar konsisten sama Easy Browser.
+ipcMain.handle('browser-search-build-url', (event, query) => {
+  return getSearchEngine().build(String(query || ''));
 });
 
-// Toggle PowerGuard nyala/mati. `enable` true/false dari switch di UI.
-ipcMain.handle('browser-extension-enabled-set', async (event, enable) => {
-  return await setPowerGuardEnabled(!!enable);
-});
-
-let extensionPopupWin = null;
-
-ipcMain.handle('browser-extension-popup', (event, anchorBounds) => {
-  if (!loadedExtension) return { ok: false, reason: 'Extension belum kemuat' };
-
-  if (extensionPopupWin && !extensionPopupWin.isDestroyed()) {
-    extensionPopupWin.close();
-    extensionPopupWin = null;
-    return { ok: true, closed: true };
-  }
-
-  const parentWin = BrowserWindow.fromWebContents(event.sender) || win;
-  const parentBounds = parentWin ? parentWin.getBounds() : { x: 100, y: 100 };
-
-  const x = Math.round(
-    parentBounds.x + (anchorBounds && anchorBounds.x ? anchorBounds.x : 100)
-  );
-  const y = Math.round(
-    parentBounds.y + (anchorBounds && anchorBounds.y ? anchorBounds.y : 100)
-  );
-
-  extensionPopupWin = new BrowserWindow({
-    width: 380,
-    height: 560,
-    x,
-    y,
-    frame: false,
-    resizable: false,
-    alwaysOnTop: true,
-    show: false,
-    parent: parentWin || undefined,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true
-    }
-  });
-
-  extensionPopupWin.loadURL(
-    `chrome-extension://${loadedExtension.id}/popup.html`
-  );
-
-  extensionPopupWin.once('ready-to-show', () => {
-    extensionPopupWin.show();
-  });
-
-  extensionPopupWin.on('blur', () => {
-    if (extensionPopupWin && !extensionPopupWin.isDestroyed()) {
-      extensionPopupWin.close();
-    }
-  });
-
-  extensionPopupWin.on('closed', () => {
-    extensionPopupWin = null;
-  });
-
-  return { ok: true, closed: false };
-});
+// Ganti mesin pencari aktif. Balikin id mesin pencari yang beneran ke-set.
+ipcMain.handle('browser-search-engine-set', (event, id) => setSearchEngine(id));
 
 // ==================================
 // WIFI — WINDOWS & MACOS
@@ -2243,222 +2338,6 @@ function ensureFsFolders() {
   });
 }
 
-// ==================================
-// STAGE 4 — POWERGUARD BROWSER EXTENSION
-// ==================================
-
-let loadedExtension = null;
-
-function findPowerGuardZip() {
-  const candidates = app.isPackaged
-    ? [
-        path.join(path.dirname(app.getPath('exe')), 'powerguard.zip'),
-        path.join(process.resourcesPath, 'powerguard.zip')
-      ]
-    : [path.join(__dirname, 'powerguard.zip')];
-
-  return candidates.find((p) => fs.existsSync(p)) || null;
-}
-
-const POWERGUARD_EXTRACT_DIR = path.join(
-  ROOT_DIR,
-  'dll/system/powerguard-extension'
-);
-
-function extractZipSync(zipPath, destDir) {
-  const buf = fs.readFileSync(zipPath);
-
-  const EOCD_SIG = 0x06054b50;
-  let eocdOffset = -1;
-  for (let i = buf.length - 22; i >= 0; i--) {
-    if (buf.readUInt32LE(i) === EOCD_SIG) { eocdOffset = i; break; }
-  }
-  if (eocdOffset === -1) {
-    throw new Error('File zip rusak / bukan format zip yang valid (EOCD tidak ketemu)');
-  }
-
-  const totalEntries = buf.readUInt16LE(eocdOffset + 10);
-  let cdOffset = buf.readUInt32LE(eocdOffset + 16);
-
-  fs.mkdirSync(destDir, { recursive: true });
-
-  for (let i = 0; i < totalEntries; i++) {
-    const sig = buf.readUInt32LE(cdOffset);
-    if (sig !== 0x02014b50) {
-      throw new Error('File zip rusak / bukan format zip yang valid (central directory entry tidak valid)');
-    }
-
-    const method = buf.readUInt16LE(cdOffset + 10);
-    const compSize = buf.readUInt32LE(cdOffset + 20);
-    const nameLen = buf.readUInt16LE(cdOffset + 28);
-    const extraLen = buf.readUInt16LE(cdOffset + 30);
-    const commentLen = buf.readUInt16LE(cdOffset + 32);
-    const localHeaderOffset = buf.readUInt32LE(cdOffset + 42);
-
-    const nameStart = cdOffset + 46;
-    const rawName = buf.toString('utf8', nameStart, nameStart + nameLen);
-
-    const safeName = rawName.replace(/\\/g, '/');
-    if (safeName.includes('../') || path.isAbsolute(safeName)) {
-      cdOffset = nameStart + nameLen + extraLen + commentLen;
-      continue;
-    }
-
-    const destPath = path.join(destDir, safeName);
-    const isDir = safeName.endsWith('/');
-
-    if (isDir) {
-      fs.mkdirSync(destPath, { recursive: true });
-    } else {
-      const lfNameLen = buf.readUInt16LE(localHeaderOffset + 26);
-      const lfExtraLen = buf.readUInt16LE(localHeaderOffset + 28);
-      const dataStart = localHeaderOffset + 30 + lfNameLen + lfExtraLen;
-      const compData = buf.subarray(dataStart, dataStart + compSize);
-
-      let outData;
-      if (method === 0) {
-        outData = compData;
-      } else if (method === 8) {
-        outData = zlib.inflateRawSync(compData);
-      } else {
-        cdOffset = nameStart + nameLen + extraLen + commentLen;
-        continue;
-      }
-
-      fs.mkdirSync(path.dirname(destPath), { recursive: true });
-      fs.writeFileSync(destPath, outData);
-    }
-
-    cdOffset = nameStart + nameLen + extraLen + commentLen;
-  }
-}
-
-// ==================================
-// POWERGUARD — TOGGLE ON/OFF STATE
-// ==================================
-// State on/off disimpan terpisah dari data extension-nya sendiri, biar
-// pilihan user (nyala/mati) keinget terus walau OS di-restart.
-
-const POWERGUARD_STATE_PATH = path.join(
-  ROOT_DIR,
-  'dll/system/powerguard-state.json'
-);
-
-function loadPowerGuardState() {
-  try {
-    const raw = fs.readFileSync(POWERGUARD_STATE_PATH, 'utf-8');
-    const data = JSON.parse(raw);
-    // Default nyala kalau belum pernah di-set sama sekali
-    return { enabled: data.enabled !== false };
-  } catch (error) {
-    return { enabled: true };
-  }
-}
-
-function savePowerGuardState(enabled) {
-  try {
-    fs.mkdirSync(path.dirname(POWERGUARD_STATE_PATH), { recursive: true });
-    fs.writeFileSync(
-      POWERGUARD_STATE_PATH,
-      JSON.stringify({ enabled: !!enabled }),
-      'utf-8'
-    );
-  } catch (error) {
-    console.error('[PowerGuard] Gagal nyimpen state on/off:', error.message);
-  }
-}
-
-// Ekstrak powerguard.zip ke disk kalau perlu (belum pernah / zip-nya lebih baru).
-// Dipisah dari proses load ke session, biar toggle on/off gak perlu extract ulang.
-async function extractPowerGuardIfNeeded() {
-  const zipPath = findPowerGuardZip();
-  if (!zipPath) {
-    console.log('[PowerGuard] powerguard.zip gak ketemu, skip loading extension.');
-    return false;
-  }
-
-  const manifestPath = path.join(POWERGUARD_EXTRACT_DIR, 'manifest.json');
-  const needsExtract =
-    !fs.existsSync(manifestPath) ||
-    fs.statSync(zipPath).mtimeMs > fs.statSync(manifestPath).mtimeMs;
-
-  if (needsExtract) {
-    console.log('[PowerGuard] Extracting powerguard.zip...');
-    fs.rmSync(POWERGUARD_EXTRACT_DIR, { recursive: true, force: true });
-    extractZipSync(zipPath, POWERGUARD_EXTRACT_DIR);
-  }
-
-  return fs.existsSync(manifestPath);
-}
-
-async function loadPowerGuardExtension() {
-  try {
-    const extracted = await extractPowerGuardIfNeeded();
-    if (!extracted) {
-      loadedExtension = null;
-      return;
-    }
-
-    const ext = await session.defaultSession.loadExtension(
-      POWERGUARD_EXTRACT_DIR,
-      { allowFileAccess: true }
-    );
-
-    loadedExtension = {
-      id: ext.id,
-      name: ext.manifest && ext.manifest.name,
-      version: ext.manifest && ext.manifest.version
-    };
-    console.log('[PowerGuard] Loaded:', loadedExtension.name, loadedExtension.version, ext.id);
-  } catch (err) {
-    console.error('[PowerGuard] Gagal load extension:', err);
-    loadedExtension = null;
-  }
-}
-
-// Copot extension dari session — ini yang bikin toggle "off" beneran ngefek,
-// bukan cuma nyembunyiin ikon doang. Begitu di-remove, PowerGuard berhenti
-// jalan total di semua tab (browser bawaan Akhtar OS pakai defaultSession).
-async function unloadPowerGuardExtension() {
-  try {
-    if (loadedExtension) {
-      session.defaultSession.removeExtension(loadedExtension.id);
-      console.log('[PowerGuard] Extension di-unload:', loadedExtension.id);
-    }
-  } catch (err) {
-    console.error('[PowerGuard] Gagal unload extension:', err);
-  } finally {
-    loadedExtension = null;
-    // Kalau popup PowerGuard lagi kebuka pas dimatiin, tutup juga biar gak nyangkut
-    if (extensionPopupWin && !extensionPopupWin.isDestroyed()) {
-      extensionPopupWin.close();
-      extensionPopupWin = null;
-    }
-  }
-}
-
-// Fungsi utama buat toggle on/off dari UI. Nyimpen state dulu baru eksekusi,
-// biar kalau proses load/unload gagal di tengah jalan, preferensi user tetap
-// yang paling baru (gak nyangkut di state lama).
-async function setPowerGuardEnabled(enable) {
-  savePowerGuardState(enable);
-
-  if (enable) {
-    if (!loadedExtension) {
-      await loadPowerGuardExtension();
-    }
-  } else if (loadedExtension) {
-    await unloadPowerGuardExtension();
-  }
-
-  return {
-    enabled: !!enable,
-    loaded: !!loadedExtension,
-    id: loadedExtension ? loadedExtension.id : null,
-    name: loadedExtension ? loadedExtension.name : null,
-    version: loadedExtension ? loadedExtension.version : null
-  };
-}
 
 function migrateOldAppDataStorage() {
   try {
@@ -3482,15 +3361,6 @@ app.whenReady().then(async () => {
   migrateOldAppDataStorage();
   ensureFsFolders();
   ensureTorrentFolders();
-
-  // Cuma auto-load PowerGuard pas startup kalau user emang belum matiin-nya
-  // sebelumnya. Kalau state tersimpannya "off", biarin off — jangan dipaksa nyala.
-  const powerGuardState = loadPowerGuardState();
-  if (powerGuardState.enabled) {
-    await loadPowerGuardExtension();
-  } else {
-    console.log('[PowerGuard] Dimatiin oleh user sebelumnya, skip auto-load.');
-  }
 
   session.defaultSession.setPermissionRequestHandler(
     (webContents, permission, callback) => {
