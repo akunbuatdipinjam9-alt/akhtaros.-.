@@ -403,6 +403,54 @@
             justify-content: center;
         }
         .overview-item:hover .overview-remove-btn { display: flex; }
+        #window-switcher {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: calc(100vh - 48px);
+            z-index: 9996;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(20px);
+            display: none;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        #window-switcher.show { display: block; }
+        #window-switcher h2 { color: white; font-size: 18px; font-weight: 300; margin-bottom: 20px; text-align: center; opacity: 0.8; }
+        .ws-grid { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+        .ws-item {
+            width: 240px; height: 170px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.15);
+            background: rgba(20,20,24,0.6);
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: white;
+        }
+        .ws-item:hover { border-color: rgba(0,120,215,0.6); }
+        .ws-item.active { border-color: #0078d7; box-shadow: 0 0 22px rgba(0,120,215,0.55); transform: scale(1.03); }
+        .ws-thumb {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: rgba(255,255,255,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .ws-thumb > *:not(.ws-fallback-icon) {
+            position: absolute;
+            top: 0; left: 0;
+            width: 400%; height: 400%;
+            transform: scale(0.25);
+            transform-origin: top left;
+            pointer-events: none;
+        }
+        .ws-fallback-icon { font-size: 40px; opacity: 0.5; }
+        .ws-label { flex-shrink: 0; padding: 8px 10px; font-size: 12px; background: rgba(0,0,0,0.35); display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ws-desktop-badge { margin-left: auto; font-size: 10px; opacity: 0.55; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 1px 5px; }
         .icon { width: 80px; height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 5px; border-radius: 5px; cursor: pointer; transition: background 0.2s; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); position: absolute; user-select: none; }
         .icon:hover { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.2); }
         .icon.dragging { opacity: 0.6; cursor: grabbing; z-index: 9990; }
@@ -1660,6 +1708,12 @@
         </div>
 
         
+        <div id="window-switcher">
+            <h2>Ganti Window <span style="font-size:12px;opacity:0.5;">(tahan Alt, tekan Tab / Shift+Tab, lepas Alt buat pilih)</span></h2>
+            <div class="ws-grid" id="ws-grid"></div>
+        </div>
+
+        
         <div id="start-menu" class="glass-dark">
             <div style="padding:16px 16px 0;display:flex;flex-direction:column;max-height:calc(75vh - 60px);overflow:hidden;">
                 <h2 class="text-xl font-bold mb-4" style="flex-shrink:0;">Aplikasi</h2>
@@ -2065,71 +2119,6 @@
 
         // Toggle Performance Boost: minta main process naikin prioritas proses +
         // paksa power plan OS (kalau tersedia), lalu lepas cap render di renderer.
-        // Ambil status PowerGuard sekarang (on/off pilihan user + kondisi
-        // nyata di session) terus update toggle switch, teks status, tombol
-        // "buka panel", dan ikon shield di toolbar — dipanggil tiap kali tab
-        // Settings > Browser dibuka, dan abis toggle-nya diklik.
-        async function refreshPowerGuardUI() {
-            if (!window.akhtarBrowser || !window.akhtarBrowser.getExtensionEnabled) {
-                const statusText = document.getElementById('pg-status-text');
-                if (statusText) statusText.textContent = 'Modul PowerGuard native gak tersedia (buka lewat app Electron, bukan browser biasa).';
-                return;
-            }
-
-            try {
-                const status = await window.akhtarBrowser.getExtensionEnabled();
-                const toggle = document.getElementById('pg-toggle');
-                const statusText = document.getElementById('pg-status-text');
-                const openBtn = document.getElementById('pg-open-popup');
-                const shieldBtn = document.getElementById('sbw-shield');
-
-                if (toggle) toggle.classList.toggle('on', !!status.enabled);
-
-                if (statusText) {
-                    if (status.enabled && status.loaded) {
-                        statusText.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> Aktif — ' + (status.name || 'PowerGuard') + (status.version ? ' v' + status.version : '') + ' lagi ngejagain semua tab browser.';
-                    } else if (status.enabled && !status.loaded) {
-                        statusText.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> Nyala tapi belum kemuat. Coba buka lagi tab Browser ini.';
-                    } else {
-                        statusText.innerHTML = '<i class="fa-solid fa-circle-xmark" style="color:#fca5a5;"></i> Mati — perlindungan PowerGuard gak jalan sama sekali di browser & OS.';
-                    }
-                }
-
-                if (openBtn) openBtn.style.display = status.loaded ? 'inline-block' : 'none';
-
-                if (shieldBtn) {
-                    shieldBtn.style.display = status.loaded ? 'inline-flex' : 'none';
-                    shieldBtn.title = (status.name || 'PowerGuard') + (status.version ? ' v' + status.version : '');
-                }
-            } catch (e) {
-                const statusText = document.getElementById('pg-status-text');
-                if (statusText) statusText.textContent = 'Gagal ambil status PowerGuard: ' + e.message;
-            }
-        }
-        window.refreshPowerGuardUI = refreshPowerGuardUI;
-
-        // Toggle nyala/mati PowerGuard. Matiin ini beneran ngelepas ekstensi
-        // dari session (bukan cuma sembunyiin ikon), jadi ngefek ke semua tab.
-        async function togglePowerGuard(el) {
-            if (!window.akhtarBrowser || !window.akhtarBrowser.setExtensionEnabled) return;
-
-            const enabling = !el.classList.contains('on');
-            const statusText = document.getElementById('pg-status-text');
-
-            el.style.pointerEvents = 'none';
-            if (statusText) statusText.textContent = enabling ? 'Lagi nyalain PowerGuard...' : 'Lagi matiin PowerGuard...';
-
-            try {
-                await window.akhtarBrowser.setExtensionEnabled(enabling);
-            } catch (e) {
-                if (statusText) statusText.textContent = 'Gagal ' + (enabling ? 'nyalain' : 'matiin') + ' PowerGuard: ' + e.message;
-            } finally {
-                el.style.pointerEvents = '';
-                refreshPowerGuardUI();
-            }
-        }
-        window.togglePowerGuard = togglePowerGuard;
-
         async function togglePerformanceBoost(el) {
             const enabling = !el.classList.contains('on');
             const logEl = document.getElementById('perf-boost-log');
@@ -2185,6 +2174,8 @@
 
         let customApps = [];
         let trashedApps = [];
+        let workspacePresets = []; // preset { id, name, createdAt, muteNotifications, windows:[...], schedule:{enabled,time,lastFiredDate} }
+        let doNotDisturbActive = false; // dipasang true kalau lagi restore workspace preset yang minta mute notifikasi
         let iconPositions = {}; // { appId: { x, y, desktop: 0 } }
 
         const MAX_DESKTOPS = 7;
@@ -2365,7 +2356,7 @@
         }
 
         function playWibuChime(type) {
-            if (!osWibuMode) return;
+            if (!osWibuMode || doNotDisturbActive) return;
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const pattern = wibuSoundPatterns[type] || wibuSoundPatterns.open;
@@ -2432,6 +2423,7 @@
         }
 
         function showWibuNotification(msg, pct) {
+            if (doNotDisturbActive) return;
             const n = document.createElement('div');
             n.className = 'wibu-notif';
             n.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:linear-gradient(135deg,#ff6b9d,#c44dff);color:#fff;padding:16px 24px;border-radius:16px;font-size:14px;max-width:400px;box-shadow:0 8px 32px rgba(196,77,255,0.4);font-family:sans-serif;border:2px solid rgba(255,255,255,0.3);text-align:center;';
@@ -2962,32 +2954,25 @@
                             <div style="font-size:12px;color:#666;margin-bottom:16px;">Semua kontrol Easy Browser (tab, alamat, navigasi, riwayat, bookmark) sekarang ada di sini.</div>
 
                             <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;flex-wrap:wrap;background:#f7f7f7;border:1px solid #e5e5e5;border-radius:10px;padding:10px;">
-                                <button id="sbw-back" title="Kembali" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrow-left"></i></button>
-                                <button id="sbw-forward" title="Maju" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrow-right"></i></button>
-                                <button id="sbw-reload" title="Muat ulang" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrows-rotate"></i></button>
+                                <button id="sbw-back" title="Kembali (Alt+←)" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrow-left"></i></button>
+                                <button id="sbw-forward" title="Maju (Alt+→)" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrow-right"></i></button>
+                                <button id="sbw-reload" title="Muat ulang (Ctrl+R)" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-arrows-rotate"></i></button>
                                 <button id="sbw-home" title="Beranda" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-house"></i></button>
                                 <div style="flex:1;min-width:200px;display:flex;align-items:center;background:white;border:1px solid #ddd;border-radius:20px;padding:0 12px;height:34px;">
-                                    <i class="fa-solid fa-lock" style="color:#3b82f6;font-size:11px;margin-right:8px;flex-shrink:0;"></i>
-                                    <input id="sbw-url" type="text" placeholder="Ketik URL atau cari sesuatu..." style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px;" />
+                                    <img id="sbw-favicon" style="width:14px;height:14px;margin-right:7px;flex-shrink:0;display:none;" />
+                                    <i id="sbw-lock-icon" class="fa-solid fa-lock" style="color:#3b82f6;font-size:11px;margin-right:8px;flex-shrink:0;" title="Koneksi aman"></i>
+                                    <input id="sbw-url" list="sbw-url-suggestions" type="text" placeholder="Ketik URL atau cari sesuatu... (Ctrl+L)" autocomplete="off" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px;" />
+                                    <datalist id="sbw-url-suggestions"></datalist>
                                 </div>
                                 <button id="sbw-go" title="Pergi" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-magnifying-glass"></i></button>
                                 <button id="sbw-star" title="Bookmark halaman ini" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-regular fa-star"></i></button>
                                 <button id="sbw-incognito" title="Tab incognito baru" style="width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-user-secret"></i></button>
-                                <button id="sbw-shield" title="PowerGuard" style="display:none;width:32px;height:32px;border:none;border-radius:6px;background:white;border:1px solid #ddd;cursor:pointer;"><i class="fa-solid fa-shield-halved" style="color:#22c55e;"></i></button>
                             </div>
 
                             <div style="margin-bottom:20px;">
-                                <h3 style="font-weight:bold;margin-bottom:8px;"><i class="fa-solid fa-shield-halved" style="color:#22c55e;"></i> PowerGuard</h3>
-                                <div style="background:linear-gradient(135deg,#052e16,#14532d);border:1px solid #22c55e;border-radius:10px;padding:14px;color:white;">
-                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                                        <span style="font-weight:bold;font-size:14px;flex:1;">Ekstensi PowerGuard</span>
-                                        <div class="toggle-switch" id="pg-toggle" onclick="togglePowerGuard(this)"></div>
-                                    </div>
-                                    <div style="font-size:11px;opacity:0.85;" id="pg-status-text">Mengecek status...</div>
-                                    <div style="margin-top:10px;">
-                                        <button id="pg-open-popup" style="display:none;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:7px 12px;border-radius:8px;cursor:pointer;font-weight:600;font-size:11px;">Buka Panel PowerGuard</button>
-                                    </div>
-                                </div>
+                                <h3 style="font-weight:bold;margin-bottom:8px;"><i class="fa-solid fa-magnifying-glass" style="color:#3b82f6;"></i> Mesin Pencari</h3>
+                                <div style="font-size:11px;color:#888;margin-bottom:8px;">Dipakai kalau kamu ngetik kata kunci (bukan URL) di kolom alamat, dan sebagai halaman Beranda.</div>
+                                <select id="sbw-search-engine" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;background:white;cursor:pointer;outline:none;"></select>
                             </div>
 
                             <div style="margin-bottom:20px;">
@@ -3152,6 +3137,18 @@
                                         <div style="font-size:11px;opacity:0.75;">Scan device sekitar & transfer file tanpa internet</div>
                                     </div>
                                     <button onclick="openWindow('akhtarshare')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">Buka Akhtar Share</button>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:20px;">
+                                <h3 style="font-weight:bold;margin-bottom:8px;"><i class="fa-solid fa-layer-group" style="color:#a78bfa;"></i> Workspace Presets</h3>
+                                <div style="background:linear-gradient(135deg,#5b21b6,#be185d);border:1px solid #7c3aed;border-radius:10px;padding:14px;color:white;display:flex;align-items:center;gap:14px;">
+                                    <i class="fa-solid fa-layer-group" style="font-size:28px;color:#c4b5fd;"></i>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:bold;font-size:13px;">Simpan Susunan Window</div>
+                                        <div style="font-size:11px;opacity:0.75;">Restore layout window + tab browser 1 klik, bisa dijadwalin harian</div>
+                                    </div>
+                                    <button onclick="openWindow('workspacepresets')" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap;">Buka Workspace Presets</button>
                                 </div>
                             </div>
 
@@ -4863,6 +4860,59 @@
                         </div>
 
                         <button class="as-footer-btn" onclick="window.akhtarShare && window.akhtarShare.openDownloadsFolder()"><i class="fa-solid fa-folder-open"></i> Buka Folder File Diterima</button>
+                    </div>
+                </div>
+            ` },
+            { id: 'workspacepresets', name: 'Workspace Presets', icon: 'fa-layer-group', color: 'text-violet-300', type: 'native', ram: 40, winWidth: '480px', winHeight: '660px', hiddenFromMenu: true, html: `
+                <style>
+                    .wp-wrap{display:flex;flex-direction:column;height:100%;background:#0f172a;color:#e2e8f0;font-size:13px;}
+                    .wp-header{padding:14px 16px;background:linear-gradient(135deg,#7c3aed,#db2777);border-bottom:1px solid #4c1d95;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+                    .wp-header h2{margin:0;font-size:16px;}
+                    .wp-header p{margin:2px 0 0;font-size:11px;opacity:0.85;}
+                    .wp-save-btn{margin-left:auto;background:rgba(255,255,255,0.18);border:none;color:white;padding:8px 12px;border-radius:8px;cursor:pointer;font-size:11.5px;font-weight:700;white-space:nowrap;}
+                    .wp-body{flex:1;overflow-y:auto;padding:14px 16px 20px;}
+                    .wp-empty{padding:30px 10px;text-align:center;color:#94a3b8;font-size:12.5px;line-height:1.6;}
+                    .wp-empty i{font-size:32px;color:#475569;margin-bottom:10px;display:block;}
+                    .wp-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:13px;margin-bottom:12px;}
+                    .wp-card-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+                    .wp-card-name{font-weight:700;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+                    .wp-card-date{font-size:10px;color:#64748b;flex-shrink:0;}
+                    .wp-apps-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+                    .wp-app-chip{width:26px;height:26px;border-radius:7px;background:#334155;display:flex;align-items:center;justify-content:center;font-size:11px;}
+                    .wp-actions{display:flex;gap:6px;margin-bottom:8px;}
+                    .wp-restore-btn{flex:1;background:#6d28d9;border:none;color:white;padding:8px;border-radius:7px;cursor:pointer;font-weight:700;font-size:11.5px;}
+                    .wp-restore-btn:hover{background:#7c3aed;}
+                    .wp-del-btn{background:#1e293b;border:1px solid #475569;color:#94a3b8;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:11.5px;}
+                    .wp-del-btn:hover{background:#7f1d1d;color:#fecaca;border-color:#991b1b;}
+                    .wp-schedule-row{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px dashed rgba(148,163,184,0.2);font-size:11px;flex-wrap:wrap;}
+                    .wp-schedule-row input[type=time]{background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:3px 6px;font-size:11.5px;}
+                    .wp-mute-badge{font-size:9px;font-weight:700;background:#450a0a;color:#fca5a5;border-radius:99px;padding:2px 7px;margin-left:6px;}
+                    .wp-save-form{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:13px;margin-bottom:16px;display:none;}
+                    .wp-save-form.show{display:block;}
+                    .wp-save-form input[type=text]{width:100%;box-sizing:border-box;background:#0f172a;border:1px solid #334155;color:white;border-radius:6px;padding:8px 10px;font-size:12.5px;margin-bottom:8px;}
+                    .wp-save-form-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:12px;gap:10px;}
+                    .wp-save-confirm-btn{width:100%;background:#6d28d9;border:none;color:white;padding:10px;border-radius:7px;cursor:pointer;font-weight:700;font-size:12.5px;}
+                    .wp-note{font-size:10px;color:#64748b;margin-top:-4px;margin-bottom:10px;line-height:1.5;}
+                </style>
+                <div class="wp-wrap">
+                    <div class="wp-header">
+                        <div>
+                            <h2>Workspace Presets</h2>
+                            <p>Simpan & restore susunan window 1 klik</p>
+                        </div>
+                        <button class="wp-save-btn" onclick="wpToggleSaveForm()"><i class="fa-solid fa-plus"></i> Simpan Ini</button>
+                    </div>
+                    <div class="wp-body" id="wp-body">
+                        <div class="wp-save-form" id="wp-save-form">
+                            <input type="text" id="wp-save-name" placeholder="Nama workspace, misal: Deep Work">
+                            <div class="wp-save-form-row">
+                                <span>Mute notifikasi pas workspace ini aktif</span>
+                                <div class="toggle-switch" id="wp-save-mute"></div>
+                            </div>
+                            <div class="wp-note">Nyimpen posisi/ukuran semua window yang lagi kebuka di desktop ini, tab Easy Browser (URL), dan folder yang lagi dibuka di Files (Nyata).</div>
+                            <button class="wp-save-confirm-btn" onclick="wpConfirmSaveCurrent()">Simpan Workspace Ini</button>
+                        </div>
+                        <div id="wp-list"></div>
                     </div>
                 </div>
             ` },
@@ -6684,6 +6734,8 @@ void loop() {
                 fileSystem = savedFs || defaultFileSystem();
                 const savedPos = await idbGet('iconPositions');
                 iconPositions = savedPos || {};
+                const savedPresets = await idbGet('workspacePresets');
+                workspacePresets = savedPresets || [];
                 const lsNotes = localStorage.getItem('akhtar_os_notes');
                 if (lsNotes) { idbSet('notes', lsNotes); localStorage.removeItem('akhtar_os_notes'); }
                 await applyStoredWallpaper();
@@ -7718,7 +7770,340 @@ void loop() {
             }
         }
 
+        // ==================================
+        // WORKSPACE PRESETS
+        // ==================================
+        // Beda sama Persona (itu ganti konteks OS: wallpaper, DNS, spoof lokasi).
+        // Workspace Presets ini ganti SUSUNAN WINDOW di desktop yang aktif —
+        // posisi/ukuran tiap window, tab Easy Browser (URL), folder yang lagi
+        // dibuka di Files (Nyata), plus opsi mute notifikasi & jadwal auto-load harian.
+
+        function wpToggleSaveForm() {
+            const f = document.getElementById('wp-save-form');
+            if (!f) return;
+            f.classList.toggle('show');
+            if (f.classList.contains('show')) {
+                const nameInput = document.getElementById('wp-save-name');
+                if (nameInput) { nameInput.value = ''; nameInput.focus(); }
+                const muteToggle = document.getElementById('wp-save-mute');
+                if (muteToggle) muteToggle.classList.remove('on');
+            }
+        }
+
+        // Ambil snapshot window yang lagi kebuka DI DESKTOP AKTIF SAJA — workspace
+        // preset itu representasi satu susunan kerja, bukan semua window di semua desktop.
+        function wpCaptureCurrentWorkspace() {
+            const windows = [];
+            const allApps = getAllApps();
+            Object.keys(openWindows).forEach(function (appId) {
+                if ((openWindows[appId].desktop || 0) !== currentDesktop) return;
+                const win = document.getElementById('win-' + appId);
+                const app = allApps.find(function (a) { return a.id === appId; });
+                if (!win || !app) return;
+                windows.push({
+                    appId: appId,
+                    top: win.style.top, left: win.style.left,
+                    width: win.style.width, height: win.style.height,
+                    maximized: win.dataset.maximized === 'true',
+                    minimized: !!openWindows[appId].minimized,
+                    extra: appId === 'realfiles' ? { path: rfCurrentPath } : {}
+                });
+            });
+            return windows;
+        }
+
+        async function wpSaveCurrentAsPreset(name, muteNotifications) {
+            const windows = wpCaptureCurrentWorkspace();
+            for (const w of windows) {
+                if (w.appId === 'browser' && window.akhtarBrowser && window.akhtarBrowser.getState) {
+                    try {
+                        const state = await window.akhtarBrowser.getState();
+                        w.extra.browserTabs = (state.tabs || []).map(function (t) { return t.url; }).filter(Boolean);
+                    } catch (e) { w.extra.browserTabs = []; }
+                }
+            }
+            const preset = {
+                id: 'wsp_' + Date.now(),
+                name: (name && name.trim()) || ('Workspace ' + (workspacePresets.length + 1)),
+                createdAt: Date.now(),
+                muteNotifications: !!muteNotifications,
+                windows: windows,
+                schedule: { enabled: false, time: '09:00', lastFiredDate: null }
+            };
+            workspacePresets.push(preset);
+            idbSet('workspacePresets', workspacePresets);
+            return preset;
+        }
+
+        async function wpConfirmSaveCurrent() {
+            const nameInput = document.getElementById('wp-save-name');
+            const muteToggle = document.getElementById('wp-save-mute');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const mute = muteToggle ? muteToggle.classList.contains('on') : false;
+            const countOnDesktop = Object.keys(openWindows).filter(function (id) {
+                return (openWindows[id].desktop || 0) === currentDesktop;
+            }).length;
+            if (countOnDesktop === 0) {
+                alert('Gak ada window yang kebuka di desktop ini. Buka dulu app yang mau disimpen ke workspace.');
+                return;
+            }
+            await wpSaveCurrentAsPreset(name, mute);
+            wpToggleSaveForm();
+            wpRender();
+        }
+
+        // Restore: tutup dulu semua window di desktop aktif biar susunannya bersih
+        // (persis kayak pas disimpen), baru buka ulang satu-satu sesuai preset.
+        async function wpRestorePreset(presetId) {
+            const preset = workspacePresets.find(function (p) { return p.id === presetId; });
+            if (!preset) return;
+
+            Object.keys(openWindows).slice().forEach(function (appId) {
+                if ((openWindows[appId].desktop || 0) === currentDesktop) closeWindow(appId);
+            });
+
+            doNotDisturbActive = !!preset.muteNotifications;
+
+            preset.windows.forEach(function (w) {
+                openWindow(w.appId);
+                const win = document.getElementById('win-' + w.appId);
+                if (win) {
+                    if (w.maximized) {
+                        maximizeWindow(w.appId);
+                    } else if (w.top) {
+                        win.style.top = w.top; win.style.left = w.left;
+                        win.style.width = w.width; win.style.height = w.height;
+                    }
+                    if (w.minimized) minimizeWindow(w.appId);
+                }
+                if (w.appId === 'realfiles' && w.extra && w.extra.path) {
+                    rfCurrentPath = w.extra.path;
+                    setTimeout(function () { if (typeof rfRender === 'function') rfRender(); }, 100);
+                }
+                if (w.appId === 'browser' && w.extra && Array.isArray(w.extra.browserTabs) && window.akhtarBrowser) {
+                    setTimeout(async function () {
+                        try {
+                            const state = await window.akhtarBrowser.getState();
+                            for (const t of (state.tabs || [])) { await window.akhtarBrowser.closeTab(t.id); }
+                            for (const url of w.extra.browserTabs) { await window.akhtarBrowser.newTab(url, false); }
+                        } catch (e) { /* browser native view belum siap, gapapa dilewatin */ }
+                    }, 200);
+                }
+            });
+        }
+
+        function wpRestoreClick(id) { wpRestorePreset(id); }
+
+        function wpDeletePreset(id) {
+            if (!confirm('Hapus workspace preset ini?')) return;
+            workspacePresets = workspacePresets.filter(function (p) { return p.id !== id; });
+            idbSet('workspacePresets', workspacePresets);
+            wpRender();
+        }
+
+        function wpToggleSchedule(id, el) {
+            const preset = workspacePresets.find(function (p) { return p.id === id; });
+            if (!preset) return;
+            if (!preset.schedule) preset.schedule = { enabled: false, time: '09:00', lastFiredDate: null };
+            preset.schedule.enabled = el.classList.toggle('on');
+            idbSet('workspacePresets', workspacePresets);
+        }
+
+        function wpSetScheduleTime(id, value) {
+            const preset = workspacePresets.find(function (p) { return p.id === id; });
+            if (!preset) return;
+            if (!preset.schedule) preset.schedule = { enabled: false, time: '09:00', lastFiredDate: null };
+            preset.schedule.time = value;
+            idbSet('workspacePresets', workspacePresets);
+        }
+
+        function wpRender() {
+            const list = document.getElementById('wp-list');
+            if (!list) return;
+            if (workspacePresets.length === 0) {
+                list.innerHTML = '<div class="wp-empty"><i class="fa-solid fa-layer-group"></i>Belum ada workspace preset.<br>Susun window sesuka lu, lalu klik "Simpan Ini".</div>';
+                return;
+            }
+            const allApps = getAllApps();
+            list.innerHTML = workspacePresets.slice().reverse().map(function (p) {
+                const chips = p.windows.map(function (w) {
+                    const app = allApps.find(function (a) { return a.id === w.appId; });
+                    if (!app) return '';
+                    return '<div class="wp-app-chip" title="' + getAppDisplayName(app) + '"><i class="fa-solid ' + app.icon + ' ' + app.color + '"></i></div>';
+                }).join('');
+                const sched = p.schedule || { enabled: false, time: '09:00' };
+                const dateLabel = new Date(p.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                return '' +
+                    '<div class="wp-card">' +
+                    '  <div class="wp-card-top">' +
+                    '    <div class="wp-card-name">' + p.name + (p.muteNotifications ? '<span class="wp-mute-badge">MUTE</span>' : '') + '</div>' +
+                    '    <div class="wp-card-date">' + dateLabel + '</div>' +
+                    '  </div>' +
+                    '  <div class="wp-apps-row">' + chips + '</div>' +
+                    '  <div class="wp-actions">' +
+                    '    <button class="wp-restore-btn" onclick="wpRestoreClick(\'' + p.id + '\')"><i class="fa-solid fa-bolt"></i> Restore</button>' +
+                    '    <button class="wp-del-btn" onclick="wpDeletePreset(\'' + p.id + '\')"><i class="fa-solid fa-trash"></i></button>' +
+                    '  </div>' +
+                    '  <div class="wp-schedule-row">' +
+                    '    <div class="toggle-switch' + (sched.enabled ? ' on' : '') + '" onclick="wpToggleSchedule(\'' + p.id + '\', this)"></div>' +
+                    '    <span>Auto-load tiap hari jam</span>' +
+                    '    <input type="time" value="' + (sched.time || '09:00') + '" onchange="wpSetScheduleTime(\'' + p.id + '\', this.value)">' +
+                    '  </div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function wpInit() {
+            wpRender();
+        }
+
+        // Scheduler background — jalan terus tiap 30 detik gak peduli window
+        // Workspace Presets-nya lagi kebuka atau enggak, biar auto-load jam
+        // segini beneran jalan walau usernya lagi kerja di app lain.
+        function wpCheckSchedule() {
+            if (!workspacePresets || workspacePresets.length === 0) return;
+            const now = new Date();
+            const nowHM = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            const todayStr = now.toDateString();
+            let changed = false;
+            workspacePresets.forEach(function (p) {
+                if (!p.schedule || !p.schedule.enabled) return;
+                if (p.schedule.time !== nowHM) return;
+                if (p.schedule.lastFiredDate === todayStr) return;
+                p.schedule.lastFiredDate = todayStr;
+                changed = true;
+                wpRestorePreset(p.id);
+            });
+            if (changed) idbSet('workspacePresets', workspacePresets);
+        }
+        setInterval(wpCheckSchedule, 30000);
+
+        // ==================================
+        // ALT+TAB WINDOW SWITCHER (live preview)
+        // ==================================
+        // Beda sama Ctrl+Tab (itu buat ganti Virtual Desktop). Alt+Tab ini
+        // buat ganti-ganti WINDOW yang lagi kebuka, lintas desktop, lengkap
+        // sama preview konten window-nya (bukan cuma nama app doang).
+        let wsOpenFlag = false;
+        let wsIndex = 0;
+        let wsList = [];
+
+        // Urutan: MRU duluan (yang paling baru difokusin di depan), sisanya
+        // (window yang kebuka tapi belum pernah di-fokus-in lewat tracker ini) di belakang.
+        function getSwitchableWindows() {
+            const allApps = getAllApps();
+            const ids = Object.keys(openWindows);
+            const ordered = windowMRU.filter(id => ids.includes(id));
+            ids.forEach(id => { if (!ordered.includes(id)) ordered.push(id); });
+            return ordered.map(appId => {
+                const app = allApps.find(a => a.id === appId);
+                if (!app) return null;
+                return { appId, app, desktop: openWindows[appId].desktop || 0 };
+            }).filter(Boolean);
+        }
+
+        function openWindowSwitcher(initialDelta) {
+            wsList = getSwitchableWindows();
+            if (wsList.length === 0) return;
+            wsOpenFlag = true;
+            wsIndex = initialDelta < 0 ? wsList.length - 1 : (wsList.length > 1 ? 1 : 0);
+            const el = document.getElementById('window-switcher');
+            if (el) el.classList.add('show');
+            renderWindowSwitcher();
+        }
+
+        function moveWindowSwitcher(delta) {
+            if (!wsOpenFlag || wsList.length === 0) return;
+            wsIndex = (wsIndex + delta + wsList.length) % wsList.length;
+            renderWindowSwitcher();
+        }
+
+        function closeWindowSwitcher() {
+            wsOpenFlag = false;
+            const el = document.getElementById('window-switcher');
+            if (el) el.classList.remove('show');
+        }
+
+        function renderWindowSwitcher() {
+            const grid = document.getElementById('ws-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            wsList.forEach(function (item, i) {
+                const card = document.createElement('div');
+                card.className = 'ws-item' + (i === wsIndex ? ' active' : '');
+                card.onclick = function () { wsIndex = i; activateWindowSwitcherSelection(); };
+
+                const thumb = document.createElement('div');
+                thumb.className = 'ws-thumb';
+                const srcWin = document.getElementById('win-' + item.appId);
+                const content = srcWin ? srcWin.querySelector('.window-content') : null;
+                let cloned = false;
+                // Cuma clone konten app 'native' (HTML murni) — aman & murah.
+                // App 'iframe' atau view native (browser) dikasih fallback ikon
+                // daripada maksa clone yang bisa mancing reload/nembus sandbox.
+                if (content && item.app.type === 'native') {
+                    try {
+                        const clone = content.cloneNode(true);
+                        clone.querySelectorAll('[id]').forEach(function (el) { el.removeAttribute('id'); });
+                        clone.style.pointerEvents = 'none';
+                        thumb.appendChild(clone);
+                        cloned = true;
+                    } catch (e) { /* fallback ke ikon di bawah */ }
+                }
+                if (!cloned) {
+                    const fallback = document.createElement('i');
+                    fallback.className = 'fa-solid ' + item.app.icon + ' ' + item.app.color + ' ws-fallback-icon';
+                    thumb.appendChild(fallback);
+                }
+
+                const label = document.createElement('div');
+                label.className = 'ws-label';
+                label.innerHTML = '<i class="fa-solid ' + item.app.icon + ' ' + item.app.color + '"></i> ' +
+                    getAppDisplayName(item.app) +
+                    (totalDesktops > 1 ? ' <span class="ws-desktop-badge">D' + (item.desktop + 1) + '</span>' : '');
+
+                card.appendChild(thumb);
+                card.appendChild(label);
+                grid.appendChild(card);
+            });
+
+            const activeCard = grid.children[wsIndex];
+            if (activeCard && activeCard.scrollIntoView) {
+                activeCard.scrollIntoView({ block: 'nearest', inline: 'center' });
+            }
+        }
+
+        function activateWindowSwitcherSelection() {
+            const sel = wsList[wsIndex];
+            closeWindowSwitcher();
+            if (!sel) return;
+            const appId = sel.appId;
+            if (sel.desktop !== currentDesktop) switchDesktop(sel.desktop);
+            if (openWindows[appId]) {
+                openWindows[appId].minimized = false;
+                updateWindowVisibility();
+            }
+            const win = document.getElementById('win-' + appId);
+            if (win) { win.style.zIndex = ++highestZ; }
+            focusWindowMRU(appId);
+            if (appId === 'browser' && window.akhtarBrowser && window.akhtarBrowser.show) {
+                window.akhtarBrowser.show();
+            }
+        }
+
+        // Alt+Tab polosan ditangkep OS/Windows duluan buat task switcher bawaan
+        // sebelum sempat nyampe ke renderer Electron, makanya switcher ini pakai
+        // Ctrl+Alt+Tab — kombinasi yang gak direbut OS, lebih reliable.
         document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.altKey && e.key === 'Tab') {
+                e.preventDefault();
+                if (!wsOpenFlag) {
+                    openWindowSwitcher(e.shiftKey ? -1 : 1);
+                } else {
+                    moveWindowSwitcher(e.shiftKey ? -1 : 1);
+                }
+                return;
+            }
             if (e.ctrlKey && e.key === 'ArrowLeft') {
                 e.preventDefault();
                 switchDesktop(currentDesktop - 1);
@@ -7727,15 +8112,27 @@ void loop() {
                 e.preventDefault();
                 switchDesktop(currentDesktop + 1);
             }
-            if (e.ctrlKey && e.key === 'Tab') {
+            if (e.ctrlKey && !e.altKey && e.key === 'Tab') {
                 e.preventDefault();
                 toggleOverview();
             }
             if (e.key === 'Escape') {
+                if (wsOpenFlag) {
+                    closeWindowSwitcher();
+                    return;
+                }
                 const ov = document.getElementById('desktop-overview');
                 if (ov.classList.contains('show')) {
                     ov.classList.remove('show');
                 }
+            }
+        });
+
+        // Lepas salah satu dari Ctrl ATAU Alt (mana pun yang dilepas duluan) buat
+        // langsung pindah ke window yang di-highlight.
+        document.addEventListener('keyup', function(e) {
+            if ((e.key === 'Alt' || e.key === 'Control') && wsOpenFlag) {
+                activateWindowSwitcherSelection();
             }
         });
 
@@ -9364,6 +9761,13 @@ void loop() {
 
         let openWindows = {};
         let highestZ = 100;
+        let windowMRU = []; // appId paling baru difokuskan ada di index 0 — dipakai Alt+Tab switcher
+
+        function focusWindowMRU(appId) {
+            const idx = windowMRU.indexOf(appId);
+            if (idx !== -1) windowMRU.splice(idx, 1);
+            windowMRU.unshift(appId);
+        }
 
         // ================================
         // AUTO-SAVE SESSION + RECOVERY
@@ -9712,7 +10116,7 @@ void loop() {
         function _openWindowReal(appId) {
             if (openWindows[appId]) {
                 const existingWin = document.getElementById('win-' + appId);
-                if (existingWin) { existingWin.style.zIndex = ++highestZ; }
+                if (existingWin) { existingWin.style.zIndex = ++highestZ; focusWindowMRU(appId); }
                 return;
             }
             if (Object.keys(openWindows).length >= MAX_TABS) {
@@ -9775,6 +10179,7 @@ void loop() {
                 requestAnimationFrame(() => winDiv.classList.add('open'));
             });
             addTaskbarIcon(appId, app);
+            focusWindowMRU(appId);
 
             if (appId === 'browser' && window.akhtarBrowser) {
                 setTimeout(initNativeBrowserWindow, 60);
@@ -9809,6 +10214,9 @@ void loop() {
             if (appId === 'akhtarshare') {
                 setTimeout(asInit, 30);
             }
+            if (appId === 'workspacepresets') {
+                setTimeout(wpInit, 30);
+            }
         }
 
         function closeWindow(appId) {
@@ -9826,6 +10234,7 @@ void loop() {
             }
             delete openWindows[appId];
             removeTaskbarIcon(appId);
+            { const mi = windowMRU.indexOf(appId); if (mi !== -1) windowMRU.splice(mi, 1); }
             captureSessionSnapshot();
 
             if (appId === 'browser' && window.akhtarBrowser) {
@@ -9882,7 +10291,7 @@ void loop() {
         // AKHTAR REAL BROWSER (WebContentsView)
         // Jendela "Easy Browser" cuma nampilin viewport halamannya doang.
         // Semua kontrol (tab, address bar, back/forward, history,
-        // bookmark, incognito, PowerGuard) dipindah ke Settings > Browser.
+        // bookmark, incognito) dipindah ke Settings > Browser.
         // ==================================
         let akhtarBrowserSyncRunning = false;
         let akhtarBrowserStopState = null;
@@ -9934,6 +10343,93 @@ void loop() {
         // ==================================
         let akhtarSettingsBrowserStopState = null;
         let akhtarSettingsCurrentTabUrl = '';
+        let sbwHistoryCache = [];
+        let sbwBookmarksCache = [];
+
+        // Bikin URL favicon dari alamat halaman. Pakai layanan favicon Google
+        // (cuma buat nampilin ikon situs di UI, gak ngirim histori browsing kemana-mana
+        // selain request gambar favicon itu sendiri).
+        function sbwFaviconUrl(pageUrl) {
+            if (!pageUrl || !/^https?:\/\//i.test(pageUrl)) return '';
+            return 'https://www.google.com/s2/favicons?sz=32&domain_url=' + encodeURIComponent(pageUrl);
+        }
+
+        function sbwMakeFaviconImg(pageUrl) {
+            const img = document.createElement('img');
+            img.style.cssText = 'width:14px;height:14px;flex-shrink:0;border-radius:2px;';
+            const src = sbwFaviconUrl(pageUrl);
+            if (!src) {
+                img.style.display = 'none';
+            } else {
+                img.src = src;
+                img.onerror = () => { img.style.display = 'none'; };
+            }
+            return img;
+        }
+
+        // Update ikon gembok di address bar sesuai protokol halaman yang lagi aktif
+        function updateSbwLockIcon(pageUrl) {
+            const icon = document.getElementById('sbw-lock-icon');
+            const favImg = document.getElementById('sbw-favicon');
+
+            if (favImg) {
+                const src = sbwFaviconUrl(pageUrl);
+                if (src) {
+                    favImg.src = src;
+                    favImg.style.display = 'inline-block';
+                    favImg.onerror = () => { favImg.style.display = 'none'; };
+                } else {
+                    favImg.style.display = 'none';
+                }
+            }
+
+            if (!icon) return;
+
+            if (/^https:\/\//i.test(pageUrl)) {
+                icon.className = 'fa-solid fa-lock';
+                icon.style.color = '#22c55e';
+                icon.title = 'Koneksi aman (HTTPS)';
+            } else if (/^http:\/\//i.test(pageUrl)) {
+                icon.className = 'fa-solid fa-triangle-exclamation';
+                icon.style.color = '#f59e0b';
+                icon.title = 'Tidak aman (HTTP)';
+            } else {
+                icon.className = 'fa-solid fa-circle-info';
+                icon.style.color = '#9ca3af';
+                icon.title = 'Halaman internal';
+            }
+        }
+
+        // Isi datalist saran address bar dari histori + bookmark yang cocok
+        function updateSbwUrlSuggestions(query) {
+            const list = document.getElementById('sbw-url-suggestions');
+            if (!list) return;
+
+            list.innerHTML = '';
+
+            const q = (query || '').trim().toLowerCase();
+            if (!q) return;
+
+            const combined = [...sbwBookmarksCache, ...sbwHistoryCache];
+            const seen = new Set();
+            let count = 0;
+
+            for (const item of combined) {
+                if (count >= 8) break;
+                if (!item || !item.url || seen.has(item.url)) continue;
+
+                const hay = (item.url + ' ' + (item.title || '')).toLowerCase();
+                if (!hay.includes(q)) continue;
+
+                seen.add(item.url);
+                count += 1;
+
+                const opt = document.createElement('option');
+                opt.value = item.url;
+                opt.label = item.title || item.url;
+                list.appendChild(opt);
+            }
+        }
 
         function renderSbwTabsList(tabsList, activeId) {
             const el = document.getElementById('sbw-tabs-list');
@@ -9951,9 +10447,15 @@ void loop() {
                     + (t.id === activeId ? 'background:#e8f0fe;border:1px solid #8ab4f8;' : 'background:#f7f7f7;border:1px solid #e5e5e5;');
 
                 const label = document.createElement('div');
-                label.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
-                label.innerHTML = (t.incognito ? '<i class="fa-solid fa-user-secret" style="margin-right:4px;color:#7c3aed;"></i>' : '')
+                label.style.cssText = 'flex:1;display:flex;align-items:center;gap:7px;overflow:hidden;';
+
+                const textSpan = document.createElement('span');
+                textSpan.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+                textSpan.innerHTML = (t.incognito ? '<i class="fa-solid fa-user-secret" style="margin-right:4px;color:#7c3aed;"></i>' : '')
                     + (t.loading ? 'Memuat...' : (t.title || 'Tab baru')).replace(/</g, '&lt;');
+
+                if (!t.incognito) label.appendChild(sbwMakeFaviconImg(t.url));
+                label.appendChild(textSpan);
                 label.onclick = () => {
                     if (t.id !== activeId) window.akhtarBrowser.switchTab(t.id);
                 };
@@ -9973,6 +10475,8 @@ void loop() {
         }
 
         function renderSbwHistoryList(list) {
+            sbwHistoryCache = list || [];
+
             const el = document.getElementById('sbw-history-list');
             if (!el) return;
             el.innerHTML = '';
@@ -9985,6 +10489,8 @@ void loop() {
             list.forEach((h) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;background:#f7f7f7;border:1px solid #e5e5e5;font-size:12px;margin-bottom:6px;cursor:pointer;';
+
+                row.appendChild(sbwMakeFaviconImg(h.url));
 
                 const text = document.createElement('div');
                 text.style.cssText = 'flex:1;overflow:hidden;';
@@ -10007,6 +10513,8 @@ void loop() {
         }
 
         function renderSbwBookmarksList(list) {
+            sbwBookmarksCache = list || [];
+
             const el = document.getElementById('sbw-bookmarks-list');
             if (!el) return;
             el.innerHTML = '';
@@ -10019,6 +10527,8 @@ void loop() {
             list.forEach((b) => {
                 const row = document.createElement('div');
                 row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;background:#f7f7f7;border:1px solid #e5e5e5;font-size:12px;margin-bottom:6px;cursor:pointer;';
+
+                row.appendChild(sbwMakeFaviconImg(b.url));
 
                 const text = document.createElement('div');
                 text.style.cssText = 'flex:1;overflow:hidden;';
@@ -10067,6 +10577,74 @@ void loop() {
         }
 
         // Dipanggil dari openSettingTab('browser')
+        // Isi dropdown pilihan mesin pencari di Settings > Browser dan sinkronin
+        // pilihan user ke proses main lewat window.akhtarBrowser.setSearchEngine
+        function initSbwSearchEngine() {
+            const sel = document.getElementById('sbw-search-engine');
+            if (!sel || !window.akhtarBrowser || !window.akhtarBrowser.searchEngineList) return;
+
+            Promise.all([
+                window.akhtarBrowser.searchEngineList(),
+                window.akhtarBrowser.getSearchEngine()
+            ]).then(([list, activeId]) => {
+                sel.innerHTML = '';
+                (list || []).forEach((engine) => {
+                    const opt = document.createElement('option');
+                    opt.value = engine.id;
+                    opt.textContent = engine.name;
+                    if (engine.id === activeId) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }).catch(() => {});
+
+            sel.onchange = () => {
+                window.akhtarBrowser.setSearchEngine(sel.value).then(() => {
+                    refreshActiveSearchEngineCache();
+                }).catch(() => {});
+            };
+        }
+
+        // Shortcut keyboard ala browser beneran, cuma aktif kalau tab Settings > Browser
+        // yang lagi kebuka. Dipasang sekali aja (guard sbwShortcutsInstalled) biar gak
+        // numpuk listener tiap kali pindah-pindah tab Settings.
+        let sbwShortcutsInstalled = false;
+        function installSbwKeyboardShortcuts() {
+            if (sbwShortcutsInstalled) return;
+            sbwShortcutsInstalled = true;
+
+            document.addEventListener('keydown', (e) => {
+                const panel = document.getElementById('set-browser');
+                if (!panel || !panel.classList.contains('active')) return;
+                if (!window.akhtarBrowser) return;
+
+                const mod = e.ctrlKey || e.metaKey;
+                const key = e.key.toLowerCase();
+
+                if (mod && key === 'l') {
+                    e.preventDefault();
+                    const urlInput = document.getElementById('sbw-url');
+                    if (urlInput) { urlInput.focus(); urlInput.select(); }
+                } else if (mod && key === 't') {
+                    e.preventDefault();
+                    window.akhtarBrowser.newTab();
+                } else if (mod && key === 'w') {
+                    e.preventDefault();
+                    window.akhtarBrowser.getState().then((state) => {
+                        if (state && state.activeTabId) window.akhtarBrowser.closeTab(state.activeTabId);
+                    }).catch(() => {});
+                } else if (mod && key === 'r') {
+                    e.preventDefault();
+                    window.akhtarBrowser.reload();
+                } else if (e.altKey && e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    window.akhtarBrowser.back();
+                } else if (e.altKey && e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    window.akhtarBrowser.forward();
+                }
+            });
+        }
+
         function initBrowserSettingsPanel() {
             if (!window.akhtarBrowser) return;
 
@@ -10087,24 +10665,6 @@ void loop() {
             const incognitoBtn = document.getElementById('sbw-incognito');
             const newTabBtn = document.getElementById('sbw-newtab');
             const historyClearBtn = document.getElementById('sbw-history-clear');
-            const shieldBtn = document.getElementById('sbw-shield');
-
-            if (shieldBtn) {
-                refreshPowerGuardUI();
-
-                shieldBtn.onclick = () => {
-                    const r = shieldBtn.getBoundingClientRect();
-                    window.akhtarBrowser.openExtensionPopup({ x: r.left, y: r.bottom });
-                };
-            }
-
-            const pgOpenBtn = document.getElementById('pg-open-popup');
-            if (pgOpenBtn) {
-                pgOpenBtn.onclick = () => {
-                    const r = pgOpenBtn.getBoundingClientRect();
-                    window.akhtarBrowser.openExtensionPopup({ x: r.left, y: r.bottom });
-                };
-            }
 
             function go() {
                 const val = (urlInput.value || '').trim();
@@ -10116,6 +10676,9 @@ void loop() {
             if (urlInput) {
                 urlInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') go();
+                });
+                urlInput.addEventListener('input', () => {
+                    updateSbwUrlSuggestions(urlInput.value);
                 });
             }
 
@@ -10172,6 +10735,8 @@ void loop() {
                 };
             }
 
+            initSbwSearchEngine();
+
             if (akhtarSettingsBrowserStopState) {
                 akhtarSettingsBrowserStopState();
                 akhtarSettingsBrowserStopState = null;
@@ -10210,6 +10775,8 @@ void loop() {
                     akhtarSettingsCurrentTabUrl = newUrl;
                     refreshSbwStarButton();
                 }
+
+                updateSbwLockIcon(newUrl);
             });
 
             window.akhtarBrowser.getState().then((state) => {
@@ -10224,8 +10791,10 @@ void loop() {
 
                 akhtarSettingsCurrentTabUrl = activeTab ? (activeTab.url || '') : '';
                 refreshSbwStarButton();
+                updateSbwLockIcon(akhtarSettingsCurrentTabUrl);
             }).catch(() => {});
 
+            installSbwKeyboardShortcuts();
             refreshSbwHistory();
             refreshSbwBookmarks();
         }
@@ -10300,6 +10869,7 @@ void loop() {
             const win = document.getElementById('win-' + appId);
             if (!win) return;
             win.style.zIndex = ++highestZ;
+            focusWindowMRU(appId);
             dragTarget = win;
             dragOffset.x = e.clientX - win.offsetLeft;
             dragOffset.y = e.clientY - win.offsetTop;
@@ -21896,6 +22466,33 @@ var spotlightOpen = false;
 var spotlightSelectedIdx = 0;
 var spotlightItems = [];
 
+// Cache nama mesin pencari yang aktif, dipakai Spotlight & Hot Corner Search biar
+// labelnya ("Cari ... di Google/Bing/dst") konsisten sama pilihan di Settings > Browser.
+// Diisi async karena akhtarBrowser.getSearchEngineInfo() itu IPC, tapi dipakai
+// synchronous di tempat lain jadi kita cache hasilnya di variabel biasa.
+var akhtarActiveSearchEngine = { id: 'google', name: 'Google' };
+function refreshActiveSearchEngineCache() {
+    if (!window.akhtarBrowser || !window.akhtarBrowser.getSearchEngineInfo) return;
+    window.akhtarBrowser.getSearchEngineInfo().then(function(info) {
+        if (info && info.name) akhtarActiveSearchEngine = info;
+    }).catch(function(){});
+}
+refreshActiveSearchEngineCache();
+
+// Buka URL pencarian pakai mesin pencari aktif. Fallback ke Google kalau
+// akhtarBrowser gak tersedia (misal dibuka di browser biasa, bukan Electron).
+function akhtarOpenWebSearch(query) {
+    if (window.akhtarBrowser && window.akhtarBrowser.buildSearchUrl) {
+        window.akhtarBrowser.buildSearchUrl(query).then(function(url) {
+            window.open(url || ('https://www.google.com/search?q=' + encodeURIComponent(query)), '_blank');
+        }).catch(function() {
+            window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank');
+        });
+    } else {
+        window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank');
+    }
+}
+
 document.addEventListener('keydown', function(e) {
     if ((e.metaKey || e.ctrlKey) && e.code === 'Space') {
         e.preventDefault();
@@ -22116,9 +22713,9 @@ window.spotlightSearch = function(query) {
 
     // ── 6. WEB SEARCH ─────────────────────────────────────────────────────
     webItems.push({
-        type:'web', icon:'fa-google', color:'text-blue-400',
-        name:'Cari "'+query+'" di Google', sub:'Buka di tab baru',
-        action:function(){ window.open('https://www.google.com/search?q='+encodeURIComponent(query),'_blank'); closeSpotlight(); }
+        type:'web', icon:'fa-magnifying-glass', color:'text-blue-400',
+        name:'Cari "'+query+'" di '+akhtarActiveSearchEngine.name, sub:'Buka di tab baru',
+        action:function(){ akhtarOpenWebSearch(query); closeSpotlight(); }
     });
     webItems.push({
         type:'web', icon:'fa-book', color:'text-gray-300',
@@ -22376,9 +22973,9 @@ function openHotCornerSearch(corner) {
                     hcItems.push({ sep: true });
                 }
                 hcItems.push({
-                    icon:'fa-brands fa-google', color:'text-blue-400',
-                    label:'Cari "'+q+'" di Google', type:'Web',
-                    action:function(){ window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank'); box.remove(); }
+                    icon:'fa-magnifying-glass', color:'text-blue-400',
+                    label:'Cari "'+q+'" di '+akhtarActiveSearchEngine.name, type:'Web',
+                    action:function(){ akhtarOpenWebSearch(q); box.remove(); }
                 });
                 hcItems.push({
                     icon:'fa-book', color:'text-gray-300',
@@ -22388,9 +22985,9 @@ function openHotCornerSearch(corner) {
             } else {
                 hcItems.push({ sep: true });
                 hcItems.push({
-                    icon:'fa-brands fa-google', color:'text-blue-400',
-                    label:'Cari "'+q+'" di Google', type:'Web',
-                    action:function(){ window.open('https://www.google.com/search?q='+encodeURIComponent(q),'_blank'); box.remove(); }
+                    icon:'fa-magnifying-glass', color:'text-blue-400',
+                    label:'Cari "'+q+'" di '+akhtarActiveSearchEngine.name, type:'Web',
+                    action:function(){ akhtarOpenWebSearch(q); box.remove(); }
                 });
                 hcItems.push({
                     icon:'fa-book', color:'text-gray-300',
