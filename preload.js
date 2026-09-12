@@ -85,6 +85,32 @@ contextBridge.exposeInMainWorld('akhtarBrowser', {
     return ipcRenderer.invoke('browser-bookmark-remove', id);
   },
 
+  // Ambil daftar mesin pencari yang tersedia: [{ id, name, icon }]
+  searchEngineList: () => {
+    return ipcRenderer.invoke('browser-search-engines-list');
+  },
+
+  // Ambil id mesin pencari yang lagi dipakai sekarang
+  getSearchEngine: () => {
+    return ipcRenderer.invoke('browser-search-engine-get');
+  },
+
+  // Info lengkap mesin pencari aktif: { id, name, icon }
+  getSearchEngineInfo: () => {
+    return ipcRenderer.invoke('browser-search-engine-info');
+  },
+
+  // Bentuk URL pencarian dari query mentah pakai mesin pencari yang aktif
+  // (buat Spotlight/Hot Corner Search biar konsisten sama Easy Browser)
+  buildSearchUrl: (query) => {
+    return ipcRenderer.invoke('browser-search-build-url', query);
+  },
+
+  // Ganti mesin pencari (id, misal 'bing', 'duckduckgo', dst). Balikin id yang aktif.
+  setSearchEngine: (id) => {
+    return ipcRenderer.invoke('browser-search-engine-set', id);
+  },
+
   // Kembali
   back: () => {
     return ipcRenderer.invoke('browser-back');
@@ -123,30 +149,6 @@ contextBridge.exposeInMainWorld('akhtarBrowser', {
     return ipcRenderer.invoke(
       'browser-get-state'
     );
-  },
-
-  // Status ekstensi bawaan PowerGuard: { loaded, id, name, version }
-  getExtensionStatus: () => {
-    return ipcRenderer.invoke('browser-extension-status');
-  },
-
-  // Ambil preferensi on/off PowerGuard: { enabled, loaded, id, name, version }
-  // "enabled" = pilihan usernya, "loaded" = kondisi nyata sekarang di session
-  getExtensionEnabled: () => {
-    return ipcRenderer.invoke('browser-extension-enabled-get');
-  },
-
-  // Nyalain/matiin PowerGuard. Balikin { enabled, loaded, id, name, version }
-  // Matiin ini beneran ngelepas extension dari session, jadi ngaruh ke semua
-  // tab browser (bukan cuma nyembunyiin ikon doang).
-  setExtensionEnabled: (enable) => {
-    return ipcRenderer.invoke('browser-extension-enabled-set', enable);
-  },
-
-  // Buka/tutup popup PowerGuard di dekat tombol shield-nya.
-  // anchorBounds: { x, y } posisi tombol relatif ke window, buat naro popup pas
-  openExtensionPopup: (anchorBounds) => {
-    return ipcRenderer.invoke('browser-extension-popup', anchorBounds);
   },
 
   // Menerima update status browser
