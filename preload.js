@@ -625,5 +625,53 @@ contextBridge.exposeInMainWorld('akhtarPoison', {
         const listener = (event, entry) => callback(entry);
         ipcRenderer.on('poison-activity', listener);
         return () => ipcRenderer.removeListener('poison-activity', listener);
+    },
+
+    // Frame POV live (screenshot ghost session lagi ngapain): { dataUrl, url, type, query }
+    onPovFrame: (callback) => {
+        if (typeof callback !== 'function') return;
+        const listener = (event, payload) => callback(payload);
+        ipcRenderer.on('poison-pov-frame', listener);
+        return () => ipcRenderer.removeListener('poison-pov-frame', listener);
+    },
+
+    // Nyala pas gak ada ghost session yang lagi jalan (jeda antar sesi / engine mati)
+    onPovIdle: (callback) => {
+        if (typeof callback !== 'function') return;
+        const listener = () => callback();
+        ipcRenderer.on('poison-pov-idle', listener);
+        return () => ipcRenderer.removeListener('poison-pov-idle', listener);
+    }
+});
+
+// ==================================
+// SEARCH BOT API — engine ghost session (klon Data Poisoning Engine)
+// dengan target opsional (website utama + kata kunci pencarian)
+// ==================================
+
+contextBridge.exposeInMainWorld('akhtarSearchBot', {
+    start: () => ipcRenderer.invoke('search-bot-start'),
+    stop: () => ipcRenderer.invoke('search-bot-stop'),
+    status: () => ipcRenderer.invoke('search-bot-status'),
+    setTarget: (website, keyword) => ipcRenderer.invoke('search-bot-set-target', website, keyword),
+
+    onActivity: (callback) => {
+        const listener = (event, entry) => callback(entry);
+        ipcRenderer.on('search-bot-activity', listener);
+        return () => ipcRenderer.removeListener('search-bot-activity', listener);
+    },
+
+    onPovFrame: (callback) => {
+        if (typeof callback !== 'function') return;
+        const listener = (event, payload) => callback(payload);
+        ipcRenderer.on('search-bot-pov-frame', listener);
+        return () => ipcRenderer.removeListener('search-bot-pov-frame', listener);
+    },
+
+    onPovIdle: (callback) => {
+        if (typeof callback !== 'function') return;
+        const listener = () => callback();
+        ipcRenderer.on('search-bot-pov-idle', listener);
+        return () => ipcRenderer.removeListener('search-bot-pov-idle', listener);
     }
 });
