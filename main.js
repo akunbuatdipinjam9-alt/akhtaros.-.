@@ -1028,6 +1028,21 @@ ipcMain.handle('browser-new-tab', (event, url, incognito) => {
   return newTab(url, incognito);
 });
 
+// ==================================
+// INSTANT SCREENSHOT + OCR — capture window utuh Akhtar OS (bukan ghost
+// window kayak Poisoning Engine/Search Bot POV). Cropping area/window aktif
+// dikerjain di renderer (canvas), di sini cuma nangkep frame mentahnya.
+// ==================================
+ipcMain.handle('screenshot-capture-window', async () => {
+  try {
+    if (!win || win.isDestroyed()) return null;
+    const image = await win.webContents.capturePage();
+    return image.toDataURL();
+  } catch (e) {
+    return null;
+  }
+});
+
 ipcMain.handle('browser-close-tab', (event, id) => {
   return closeTab(id);
 });
@@ -5150,12 +5165,14 @@ function poisonPickTarget(fingerprint) {
     // ngeblok/nge-captcha traffic otomatis kayak gini. `type` internal
     // dibiarin 'google-search' (dipake di banyak tempat lain buat
     // weight/label/badge) — cuma URL & selector-nya yang diganti.
-    key: 'google-search', domain: 'duckduckgo.com', weight: poisonEffectiveWeight('google-search'),
+    key: 'google-search', domain: 'html.duckduckgo.com', weight: poisonEffectiveWeight('google-search'),
     build: () => {
       const query = pickQuery();
       return {
         type: 'google-search', query,
-        url: 'https://duckduckgo.com/html/?q=' + encodeURIComponent(query),
+        // PENTING: endpoint HTML-nya ada di subdomain "html.", bukan di path
+        // "duckduckgo.com/html/" — itu 404/blank kalau salah subdomain.
+        url: 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query),
         useTyping: Math.random() < 0.4, homeUrl: 'https://duckduckgo.com/',
         inputSelector: '#searchbox_input, input[name="q"]'
       };
@@ -5746,7 +5763,8 @@ function searchBotPickTarget(fingerprint) {
     return {
       type: 'google-search',
       query: custom.keyword.trim(),
-      url: 'https://duckduckgo.com/html/?q=' + encodeURIComponent(query),
+      // Subdomain "html." — bukan path "duckduckgo.com/html/" (itu blank/404).
+      url: 'https://html.duckduckgo.com/html/?q=' + encodeURIComponent(query),
       useTyping: Math.random() < 0.4,
       homeUrl: 'https://duckduckgo.com/',
       inputSelector: '#searchbox_input, input[name="q"]'
@@ -5895,6 +5913,85 @@ ipcMain.handle('search-bot-start', () => searchBotStart());
 ipcMain.handle('search-bot-stop', () => searchBotStop());
 ipcMain.handle('search-bot-status', () => searchBotGetStatus());
 ipcMain.handle('search-bot-set-target', (event, website, keyword) => searchBotSetTarget(website, keyword));
+
+// ==================================
+// SMART REPLY — state (toggle enabled + weight belajar per saran) disimpen
+// ke file JSON di userData lewat main process, BUKAN localStorage — pola
+// yang sama kayak Data Poisoning Engine / Search Bot di atas. Renderer cuma
+// baca sekali pas boot (di-cache in-memory buat dipake tiap keystroke, biar
+// gak nembak IPC tiap ngetik), lalu nulis balik tiap ada perubahan (debounce).
+// ==================================
+const SMARTREPLY_STATE_FILE = path.join(app.getPath('userData'), 'smart-reply-state.json');
+
+let smartReplyState = { enabled: true, weights: {} };
+
+function smartReplyLoadPersisted() {
+  try {
+    const raw = fs.readFileSync(SMARTREPLY_STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    smartReplyState.enabled = typeof data.enabled === 'boolean' ? data.enabled : true;
+    smartReplyState.weights = (data.weights && typeof data.weights === 'object') ? data.weights : {};
+  } catch (e) {
+    // Belum pernah disimpen sebelumnya (fresh install) -> pake default di atas.
+  }
+}
+smartReplyLoadPersisted();
+
+let smartReplySaveTimer = null;
+function smartReplySavePersisted() {
+  if (smartReplySaveTimer) clearTimeout(smartReplySaveTimer);
+  smartReplySaveTimer = setTimeout(() => {
+    try {
+      fs.writeFileSync(SMARTREPLY_STATE_FILE, JSON.stringify(smartReplyState, null, 2));
+    } catch (e) {}
+  }, 400);
+}
+
+ipcMain.handle('smart-reply-load', () => smartReplyState);
+
+ipcMain.handle('smart-reply-set-enabled', (event, enabled) => {
+  smartReplyState.enabled = !!enabled;
+  smartReplySavePersisted();
+  return smartReplyState;
+});
+
+ipcMain.handle('smart-reply-set-weights', (event, weights) => {
+  smartReplyState.weights = (weights && typeof weights === 'object') ? weights : {};
+  smartReplySavePersisted();
+  return smartReplyState;
+});
+
+// ==================================
+// AUTO-THEME FROM WALLPAPER — cuma nyimpen 1 flag boolean (enabled apa
+// enggak), tapi tetep lewat file di userData (bukan localStorage), pola
+// sama kayak Smart Reply di atas. Ekstraksi warnanya sendiri (k-means)
+// jalan di renderer (butuh Canvas buat baca pixel wallpaper).
+// ==================================
+const AUTOTHEME_STATE_FILE = path.join(app.getPath('userData'), 'auto-theme-state.json');
+
+let autoThemeState = { enabled: false };
+
+function autoThemeLoadPersisted() {
+  try {
+    const raw = fs.readFileSync(AUTOTHEME_STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    autoThemeState.enabled = typeof data.enabled === 'boolean' ? data.enabled : false;
+  } catch (e) {}
+}
+autoThemeLoadPersisted();
+
+function autoThemeSavePersisted() {
+  try {
+    fs.writeFileSync(AUTOTHEME_STATE_FILE, JSON.stringify(autoThemeState, null, 2));
+  } catch (e) {}
+}
+
+ipcMain.handle('auto-theme-load', () => autoThemeState);
+ipcMain.handle('auto-theme-set-enabled', (event, enabled) => {
+  autoThemeState.enabled = !!enabled;
+  autoThemeSavePersisted();
+  return autoThemeState;
+});
 
 // ==================================
 // GEOLOCATION & TIME SPOOFER
