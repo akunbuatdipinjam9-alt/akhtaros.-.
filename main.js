@@ -5145,14 +5145,19 @@ function poisonPickTarget(fingerprint) {
   const candidates = [];
 
   candidates.push({
-    key: 'google-search', domain: 'google.com', weight: poisonEffectiveWeight('google-search'),
+    // Ganti dari Google ke DuckDuckGo — Google gampang banget nge-captcha
+    // ghost session yang volumenya lumayan; DuckDuckGo jauh lebih jarang
+    // ngeblok/nge-captcha traffic otomatis kayak gini. `type` internal
+    // dibiarin 'google-search' (dipake di banyak tempat lain buat
+    // weight/label/badge) — cuma URL & selector-nya yang diganti.
+    key: 'google-search', domain: 'duckduckgo.com', weight: poisonEffectiveWeight('google-search'),
     build: () => {
       const query = pickQuery();
       return {
         type: 'google-search', query,
-        url: 'https://www.google.com/search?q=' + encodeURIComponent(query) + '&hl=' + lang,
-        useTyping: Math.random() < 0.4, homeUrl: 'https://www.google.com/?hl=' + lang,
-        inputSelector: 'textarea[name="q"], input[name="q"]'
+        url: 'https://duckduckgo.com/html/?q=' + encodeURIComponent(query),
+        useTyping: Math.random() < 0.4, homeUrl: 'https://duckduckgo.com/',
+        inputSelector: '#searchbox_input, input[name="q"]'
       };
     }
   });
@@ -5415,6 +5420,44 @@ async function poisonSimulateBehavior(webContents, deviceClass, viewport) {
   } catch (e) { /* gak masalah kalau gagal klik, sesi tetap dianggap valid */ }
 }
 
+// ---- LIVE POV CAPTURE (screenshot ghost session buat ditampilin di panel UI) ----
+// Ambil screenshot webContents ghost secara berkala pakai capturePage() (native,
+// bukan html2canvas — capturePage bisa nangkep window Electron beneran termasuk
+// WebContentsView/BrowserWindow hidden), terus dikirim ke renderer sebagai data URL.
+let poisonPovInterval = null;
+
+function stopPovCapture() {
+  if (poisonPovInterval) {
+    clearInterval(poisonPovInterval);
+    poisonPovInterval = null;
+  }
+}
+
+function startPovCapture(ghostWin, target) {
+  stopPovCapture();
+
+  poisonPovInterval = setInterval(async () => {
+    try {
+      if (!ghostWin || ghostWin.isDestroyed()) {
+        stopPovCapture();
+        return;
+      }
+      const image = await ghostWin.webContents.capturePage();
+      if (win && !win.isDestroyed() && !ghostWin.isDestroyed()) {
+        win.webContents.send('poison-pov-frame', {
+          dataUrl: image.toDataURL(),
+          url: ghostWin.webContents.getURL(),
+          type: target.type,
+          query: target.query
+        });
+      }
+    } catch (e) {
+      // Ghost lagi navigasi / baru destroyed pas capture jalan — aman diabaikan,
+      // frame berikutnya bakal nyusul di tick selanjutnya.
+    }
+  }, 700);
+}
+
 async function poisonRunSession() {
   if (!poisonState.active) return;
 
@@ -5437,6 +5480,7 @@ async function poisonRunSession() {
   });
 
   poisonState.currentGhost = ghost;
+  startPovCapture(ghost, target);
 
   try {
     ghost.webContents.setUserAgent(fingerprint.ua);
@@ -5528,10 +5572,12 @@ async function poisonRunSession() {
     });
     poisonSavePersisted();
   } finally {
+    stopPovCapture();
     try {
       if (!ghost.isDestroyed()) ghost.destroy();
     } catch (e) {}
     if (poisonState.currentGhost === ghost) poisonState.currentGhost = null;
+    if (win && !win.isDestroyed()) win.webContents.send('poison-pov-idle');
   }
 
   if (poisonState.active) {
@@ -5561,10 +5607,14 @@ function poisonStop() {
     poisonState.timer = null;
   }
 
+  stopPovCapture();
+
   if (poisonState.currentGhost && !poisonState.currentGhost.isDestroyed()) {
     try { poisonState.currentGhost.destroy(); } catch (e) {}
   }
   poisonState.currentGhost = null;
+
+  if (win && !win.isDestroyed()) win.webContents.send('poison-pov-idle');
 
   poisonPushLog({ type: 'engine', query: null, url: null, status: 'engine-stopped' });
 
@@ -5593,6 +5643,258 @@ app.on('before-quit', () => {
 ipcMain.handle('poison-start', () => poisonStart());
 ipcMain.handle('poison-stop', () => poisonStop());
 ipcMain.handle('poison-status', () => poisonGetStatus());
+
+// ==================================
+// SEARCH BOT — engine ghost session sama kayak Data Poisoning Engine,
+// tapi bisa diarahin ke target tertentu (website + keyword) kalau diisi.
+// Kosongin field target = perilakunya identik sama Data Poisoning Engine
+// (random noise generation di berbagai jenis situs).
+// ==================================
+let searchBotPovInterval = null;
+
+function searchBotStopPovCapture() {
+  if (searchBotPovInterval) {
+    clearInterval(searchBotPovInterval);
+    searchBotPovInterval = null;
+  }
+}
+
+function searchBotStartPovCapture(ghostWin, target) {
+  searchBotStopPovCapture();
+  searchBotPovInterval = setInterval(async () => {
+    try {
+      if (!ghostWin || ghostWin.isDestroyed()) { searchBotStopPovCapture(); return; }
+      const image = await ghostWin.webContents.capturePage();
+      if (win && !win.isDestroyed() && !ghostWin.isDestroyed()) {
+        win.webContents.send('search-bot-pov-frame', {
+          dataUrl: image.toDataURL(),
+          url: ghostWin.webContents.getURL(),
+          type: target.type,
+          query: target.query
+        });
+      }
+    } catch (e) {}
+  }, 700);
+}
+
+const SEARCHBOT_STATE_FILE = path.join(app.getPath('userData'), 'search-bot-engine-state.json');
+
+const searchBotState = {
+  active: false,
+  sessionCount: 0,
+  queryCount: 0,
+  log: [],
+  timer: null,
+  currentGhost: null,
+  typeWeights: {},
+  domainBlocklist: {},
+  customTarget: { website: '', keyword: '' }
+};
+
+function searchBotLoadPersisted() {
+  try {
+    const raw = fs.readFileSync(SEARCHBOT_STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    searchBotState.sessionCount = data.sessionCount || 0;
+    searchBotState.queryCount = data.queryCount || 0;
+    searchBotState.typeWeights = data.typeWeights || {};
+    searchBotState.domainBlocklist = data.domainBlocklist || {};
+    searchBotState.customTarget = data.customTarget || { website: '', keyword: '' };
+  } catch (e) {}
+}
+
+let searchBotSaveTimer = null;
+function searchBotSavePersisted() {
+  if (searchBotSaveTimer) clearTimeout(searchBotSaveTimer);
+  searchBotSaveTimer = setTimeout(() => {
+    try {
+      fs.writeFileSync(SEARCHBOT_STATE_FILE, JSON.stringify({
+        sessionCount: searchBotState.sessionCount,
+        queryCount: searchBotState.queryCount,
+        typeWeights: searchBotState.typeWeights,
+        domainBlocklist: searchBotState.domainBlocklist,
+        customTarget: searchBotState.customTarget
+      }, null, 2));
+    } catch (e) {}
+  }, 400);
+}
+
+searchBotLoadPersisted();
+
+function searchBotPushLog(entry) {
+  searchBotState.log.unshift({ time: Date.now(), ...entry });
+  if (searchBotState.log.length > 100) searchBotState.log = searchBotState.log.slice(0, 100);
+  if (win && !win.isDestroyed()) win.webContents.send('search-bot-activity', searchBotState.log[0]);
+}
+
+function searchBotBuildCustomQuery(website, keyword) {
+  const cleanKeyword = String(keyword || '').trim();
+  const cleanWebsite = String(website || '').trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/.*$/, '')
+    .replace(/^www\./i, '');
+  if (cleanWebsite) return 'site:' + cleanWebsite + ' ' + cleanKeyword;
+  return cleanKeyword;
+}
+
+function searchBotPickTarget(fingerprint) {
+  const custom = searchBotState.customTarget;
+  if (custom && custom.keyword && custom.keyword.trim()) {
+    // DuckDuckGo, bukan Google — jauh lebih jarang nge-captcha ghost session.
+    // `site:` operator tetep jalan normal di DuckDuckGo.
+    const query = searchBotBuildCustomQuery(custom.website, custom.keyword);
+    return {
+      type: 'google-search',
+      query: custom.keyword.trim(),
+      url: 'https://duckduckgo.com/html/?q=' + encodeURIComponent(query),
+      useTyping: Math.random() < 0.4,
+      homeUrl: 'https://duckduckgo.com/',
+      inputSelector: '#searchbox_input, input[name="q"]'
+    };
+  }
+  return poisonPickTarget(fingerprint); // fallback: perilaku random sama kayak Poisoning Engine
+}
+
+async function searchBotRunSession() {
+  if (!searchBotState.active) return;
+
+  const fingerprint = poisonPickFingerprint();
+  const target = searchBotPickTarget(fingerprint);
+  const partition = `searchbot-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  const viewport = fingerprint.viewport;
+
+  const ghost = new BrowserWindow({
+    show: false,
+    width: viewport.width,
+    height: viewport.height,
+    webPreferences: { partition, sandbox: true, contextIsolation: true, nodeIntegration: false, images: true }
+  });
+
+  searchBotState.currentGhost = ghost;
+  searchBotStartPovCapture(ghost, target);
+
+  try {
+    ghost.webContents.setUserAgent(fingerprint.ua);
+    const ghostSession = session.fromPartition(partition);
+    ghostSession.webRequest.onBeforeSendHeaders((details, callback) => {
+      details.requestHeaders['Accept-Language'] = fingerprint.acceptLang;
+      callback({ requestHeaders: details.requestHeaders });
+    });
+    try {
+      if (typeof ghostSession.setTimezoneOverride === 'function') {
+        ghostSession.setTimezoneOverride(fingerprint.tz);
+      }
+    } catch (e) {}
+
+    searchBotState.sessionCount += 1;
+    if (target.query) searchBotState.queryCount += 1;
+
+    searchBotPushLog({
+      type: target.type, query: target.query, url: target.url, status: 'started',
+      fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+    });
+
+    let typedIn = false;
+    if (target.useTyping) {
+      typedIn = await poisonTrySearchByTyping(ghost.webContents, target);
+    }
+    if (!typedIn) {
+      await ghost.loadURL(target.url).catch(() => {});
+      await poisonSleep(1500 + Math.random() * 1500);
+    }
+
+    const blocked = !ghost.isDestroyed() && searchBotState.active && await poisonCheckBlocked(ghost.webContents);
+
+    if (blocked) {
+      const domain = poisonDomainFromUrl(target.url);
+      searchBotState.domainBlocklist[domain] = Date.now() + (4 * 60 * 60 * 1000 + Math.random() * 2 * 60 * 60 * 1000);
+      searchBotPushLog({
+        type: target.type, query: target.query, url: target.url, status: 'blocked', domain,
+        fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+      });
+    } else {
+      if (!ghost.isDestroyed() && searchBotState.active) {
+        await poisonSimulateBehavior(ghost.webContents, fingerprint.device, viewport);
+      }
+      const dwell = poisonRandomRange(POISON_MIN_DWELL_MS, POISON_MAX_DWELL_MS);
+      await poisonSleep(dwell);
+      searchBotPushLog({
+        type: target.type, query: target.query, url: target.url, status: 'done',
+        fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+      });
+    }
+
+    searchBotSavePersisted();
+  } catch (e) {
+    searchBotPushLog({
+      type: target.type, query: target.query, url: target.url, status: 'error', error: e.message,
+      fingerprint: { country: fingerprint.country, lang: fingerprint.lang, device: fingerprint.device }
+    });
+    searchBotSavePersisted();
+  } finally {
+    searchBotStopPovCapture();
+    try { if (!ghost.isDestroyed()) ghost.destroy(); } catch (e) {}
+    if (searchBotState.currentGhost === ghost) searchBotState.currentGhost = null;
+    if (win && !win.isDestroyed()) win.webContents.send('search-bot-pov-idle');
+  }
+
+  if (searchBotState.active) {
+    const gap = poisonRandomRange(POISON_MIN_GAP_MS, POISON_MAX_GAP_MS);
+    searchBotState.timer = setTimeout(searchBotRunSession, gap);
+  }
+}
+
+function searchBotStart() {
+  if (searchBotState.active) return searchBotGetStatus();
+  searchBotState.active = true;
+  searchBotPushLog({ type: 'engine', query: null, url: null, status: 'engine-started' });
+  searchBotState.timer = setTimeout(searchBotRunSession, 2000 + Math.random() * 3000);
+  return searchBotGetStatus();
+}
+
+function searchBotStop() {
+  searchBotState.active = false;
+  if (searchBotState.timer) { clearTimeout(searchBotState.timer); searchBotState.timer = null; }
+  searchBotStopPovCapture();
+  if (searchBotState.currentGhost && !searchBotState.currentGhost.isDestroyed()) {
+    try { searchBotState.currentGhost.destroy(); } catch (e) {}
+  }
+  searchBotState.currentGhost = null;
+  if (win && !win.isDestroyed()) win.webContents.send('search-bot-pov-idle');
+  searchBotPushLog({ type: 'engine', query: null, url: null, status: 'engine-stopped' });
+  return searchBotGetStatus();
+}
+
+function searchBotGetStatus() {
+  const now = Date.now();
+  const blockedDomains = Object.keys(searchBotState.domainBlocklist).filter((d) => searchBotState.domainBlocklist[d] > now);
+  return {
+    active: searchBotState.active,
+    sessionCount: searchBotState.sessionCount,
+    queryCount: searchBotState.queryCount,
+    blockedDomains,
+    customTarget: searchBotState.customTarget,
+    log: searchBotState.log.slice(0, 30)
+  };
+}
+
+function searchBotSetTarget(website, keyword) {
+  searchBotState.customTarget = {
+    website: String(website || '').trim(),
+    keyword: String(keyword || '').trim()
+  };
+  searchBotSavePersisted();
+  return searchBotGetStatus();
+}
+
+app.on('before-quit', () => {
+  try { searchBotStop(); } catch (e) {}
+});
+
+ipcMain.handle('search-bot-start', () => searchBotStart());
+ipcMain.handle('search-bot-stop', () => searchBotStop());
+ipcMain.handle('search-bot-status', () => searchBotGetStatus());
+ipcMain.handle('search-bot-set-target', (event, website, keyword) => searchBotSetTarget(website, keyword));
 
 // ==================================
 // GEOLOCATION & TIME SPOOFER
