@@ -27,7 +27,11 @@
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_stdlib.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    
+    <!-- Dipakai fitur Instant Screenshot + OCR — cuma di-load sekali di sini,
+         worker-nya baru dibikin lazy pas user beneran nge-screenshot pertama
+         kali biar gak nambahin beban boot OS. -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+
     <style>
         body {
             font-family: 'Segoe UI', sans-serif;
@@ -2976,7 +2980,7 @@
             { id: 'notes', name: 'Catatan', icon: 'fa-note-sticky', color: 'text-yellow-100', type: 'native', ram: 40, html: `
                 <div class="native-app p-4">
                     <h2 class="mb-2 font-bold text-gray-700">Catatan Akhtar</h2>
-                    <textarea class="w-full h-full border border-gray-300 p-2 font-mono resize-none rounded shadow-inner focus:outline-none focus:border-blue-500" placeholder="Tulis sesuatu di sini..."></textarea>
+                    <textarea id="notes-textarea" class="w-full h-full border border-gray-300 p-2 font-mono resize-none rounded shadow-inner focus:outline-none focus:border-blue-500" placeholder="Tulis sesuatu di sini..."></textarea>
                 </div>
             ` },
             { id: 'slimeworld', name: 'Slime World', icon: 'fa-earth-asia', color: 'text-green-400', type: 'native', desktop: true, ram: 180, winWidth: '900px', winHeight: '620px', html: `<div id="sw-root" style="width:100%;height:100%;background:#0a1628;position:relative;overflow:hidden;font-family:'Segoe UI',sans-serif;"></div>` },
@@ -3461,9 +3465,55 @@
                                     <strong>Cara pakai:</strong> Copy/paste apa aja → otomatis ke-record. Buka app buat liat riwayatnya.
                                 </div>
                             </div>
+
+                            <h3 style="font-weight:bold;margin-bottom:8px;">Mood-Driven UI</h3>
+                            <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:16px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                    <div>
+                                        <span style="font-weight:600;font-size:13px;">OS Ngikutin Mood Kamu</span>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">Tiap login ditanya mood → font/warna/suara OS ikut nyesuain, + OS ngasih saran (break, Focus Mode) berdasarkan mood & pola kerja kamu</div>
+                                    </div>
+                                    <div class="toggle-switch" id="mood-driven-ui-toggle" onclick="toggleMoodDrivenUI(this)"></div>
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button onclick="if(typeof window.mduShowPrompt==='function')window.mduShowPrompt(true)" style="background:#0078d7;color:white;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Set Mood Sekarang</button>
+                                    <button onclick="openWindow('moodjournal')" style="background:rgba(0,0,0,0.08);color:#333;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">Buka Mood Journal</button>
+                                </div>
+                                <div style="margin-top:12px;font-size:11px;color:#666;">
+                                    <strong>Catatan:</strong> ini murni rule sederhana (bukan AI/sentiment analysis) berdasarkan mood yang KAMU pilih sendiri + pola pasif (banyak backspace, buka app yang sama berulang, kerja lama tanpa istirahat). Mood tersimpan otomatis di Mood Journal.
+                                </div>
+                            </div>
+
+                            <h3 style="font-weight:bold;margin-bottom:8px;">Balasan Cepat (Smart Reply)</h3>
+                            <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:16px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                    <div>
+                                        <span style="font-weight:600;font-size:13px;">Saran Balasan Otomatis</span>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">Muncul chip di atas kolom teks (Notes, Chat, form apa aja) berdasarkan pola kalimat — tanya, ajakan, sapaan, info, atau permintaan</div>
+                                    </div>
+                                    <div class="toggle-switch on" id="smartreply-toggle" onclick="toggleSmartReply(this)"></div>
+                                </div>
+                                <div style="margin-top:4px;font-size:11px;color:#666;">
+                                    <strong>Catatan:</strong> ini BUKAN AI/baca-konteks-chat — murni deteksi kata kunci (?, yuk/ayo, halo/pagi, info/fyi, tolong/bantu) + daftar balasan siap pakai. Klik chip yang sering kamu pilih bakal makin sering muncul duluan, yang jarang dipilih makin turun.
+                                </div>
+                            </div>
+
+                            <h3 style="font-weight:bold;margin-bottom:8px;">Auto-Theme dari Wallpaper</h3>
+                            <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:16px;">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                                    <div>
+                                        <span style="font-weight:600;font-size:13px;">Sesuaikan Tema dari Wallpaper</span>
+                                        <div style="font-size:11px;color:#888;margin-top:2px;">Tiap ganti wallpaper, OS ekstrak 5 warna dominan (aksen, tint, highlight, border, teks) & nawarin buat diterapkan</div>
+                                    </div>
+                                    <div class="toggle-switch" id="auto-theme-toggle" onclick="toggleAutoThemeFromWallpaper(this)"></div>
+                                </div>
+                                <div style="margin-top:4px;font-size:11px;color:#666;">
+                                    <strong>Catatan:</strong> ini BUKAN AI vision — murni k-means clustering klasik (algoritma taun 1957) di 64 sample pixel wallpaper, ~10 iterasi. Kebetulan hasilnya nyambung ke wallpaper karena emang diambil langsung dari warnanya.
+                                </div>
+                            </div>
                         </div>
 
-                        
+
                         <div id="set-sound" class="setting-section">
                             <h2 style="font-size:22px;font-weight:300;margin-bottom:20px;">Suara</h2>
                             <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;">
@@ -4482,6 +4532,74 @@
                     const interval = setInterval(() => {
                         if (!document.getElementById('ch-list')) { clearInterval(interval); return; }
                         renderCH();
+                    }, 2000);
+                })();
+                <\/script>
+            ` },
+
+            { id: 'screenshothistory', name: 'Screenshot History', icon: 'fa-image', color: 'text-emerald-300', type: 'native', ram: 30, winWidth: '480px', winHeight: '560px', html: `
+                <div style="display:flex;flex-direction:column;height:100%;background:#f8fafc;font-size:13px;">
+                    <div style="padding:14px 16px;background:linear-gradient(135deg,#059669,#10b981);color:white;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-weight:bold;font-size:16px;">Screenshot History</div>
+                            <div style="font-size:11px;opacity:0.85;margin-top:2px;">20 screenshot terakhir · klik buat copy ulang</div>
+                        </div>
+                        <button onclick="window._ssClearHistory && window._ssClearHistory()" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;">Hapus Semua</button>
+                    </div>
+                    <div id="ss-list" style="flex:1;overflow-y:auto;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+                    <div style="padding:10px 14px;background:#fff;border-top:1px solid #e5e5e5;font-size:11px;color:#888;text-align:center;">
+                        Ctrl+Shift+S: area · Ctrl+Alt+Shift+S: full screen · Ctrl+Shift+A: window aktif
+                    </div>
+                </div>
+                <script>
+                (function(){
+                    function typeLabel(t) {
+                        if (t === 'url') return { txt: 'URL', color: '#0078d7' };
+                        if (t === 'code') return { txt: 'KODE', color: '#7c3aed' };
+                        if (t === 'table') return { txt: 'TABEL', color: '#b45309' };
+                        return { txt: 'TEKS', color: '#6b7280' };
+                    }
+                    async function renderSS() {
+                        const list = document.getElementById('ss-list');
+                        if (!list) return;
+                        const items = (typeof idbGet === 'function') ? (await idbGet('screenshotHistory') || []) : [];
+                        if (items.length === 0) {
+                            list.style.display = 'block';
+                            list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#aaa;grid-column:1/-1;"><div style="font-size:40px;margin-bottom:12px;"><i class="fa-solid fa-camera-retro"></i></div><div style="font-size:14px;font-weight:600;margin-bottom:4px;">Belum ada screenshot</div><div style="font-size:12px;">Pencet Ctrl+Shift+S buat mulai!</div></div>';
+                            return;
+                        }
+                        list.style.display = 'grid';
+                        list.innerHTML = items.map((item, i) => {
+                            const lbl = typeLabel(item.type);
+                            return \`<div onclick="window._ssCopyItem(\${i})" style="background:white;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,0.06);" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='#e5e7eb'">
+                                <img src="\${item.thumb}" style="width:100%;height:90px;object-fit:cover;display:block;background:#000;">
+                                <div style="padding:7px 9px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                        <span style="background:\${lbl.color};color:white;font-size:9px;font-weight:700;padding:1px 6px;border-radius:99px;">\${lbl.txt}</span>
+                                        <span style="font-size:9px;color:#aaa;">\${item.time || ''}</span>
+                                    </div>
+                                    <div style="font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">\${(item.text||'(gak ada teks kebaca)').replace(/</g,'&lt;')}</div>
+                                </div>
+                            </div>\`;
+                        }).join('');
+                    }
+                    window._ssCopyItem = async function(i) {
+                        const items = (await idbGet('screenshotHistory')) || [];
+                        const item = items[i];
+                        if (!item) return;
+                        if (typeof window._ssRecopy === 'function') {
+                            await window._ssRecopy(item);
+                        }
+                    };
+                    window._ssClearHistory = async function() {
+                        if (!confirm('Hapus semua riwayat screenshot?')) return;
+                        await idbSet('screenshotHistory', []);
+                        renderSS();
+                    };
+                    renderSS();
+                    const interval = setInterval(() => {
+                        if (!document.getElementById('ss-list')) { clearInterval(interval); return; }
+                        renderSS();
                     }, 2000);
                 })();
                 <\/script>
@@ -6273,6 +6391,9 @@ void loop() {
                 desktop.style.display = 'block';
                 initDesktop();
                 initAccessibilityStates();
+                // Mood-Driven UI: tanya mood tiap login (kalau fiturnya diaktifin
+                // di Settings). Ditaro paling akhir biar desktop udah keliatan dulu.
+                if (typeof window.mduShowPrompt === 'function') window.mduShowPrompt(false);
             }, 500);
         }
 
@@ -6690,7 +6811,7 @@ void loop() {
         // 'userAccounts' TIDAK termasuk sini karena itu metadata sistem (daftar akun), bukan data personal.
         // (customWallpaperImage ditambahin ke sini juga — sebelumnya kelewat, jadi wallpaper foto
         // pribadi satu user bisa "bocor"/ketimpa ke akun lain di device yang sama.)
-        const PER_USER_IDB_KEYS = ['notes', 'todos', 'fileSystem', 'customApps', 'trashedApps', 'iconPositions', 'sessionSnapshot', 'customWallpaperVideo', 'customWallpaperImage'];
+        const PER_USER_IDB_KEYS = ['notes', 'todos', 'fileSystem', 'customApps', 'trashedApps', 'iconPositions', 'sessionSnapshot', 'customWallpaperVideo', 'customWallpaperImage', 'screenshotHistory'];
         // Subset dari PER_USER_IDB_KEYS yang isinya Blob/File (biner), bukan teks/JSON —
         // ini butuh jalur enkripsi beda (lewat base64) daripada JSON.stringify biasa.
         const BLOB_IDB_KEYS = ['customWallpaperVideo', 'customWallpaperImage'];
@@ -9834,6 +9955,11 @@ void loop() {
                 items.unshift({ text, type, time: timeStr, ts: now.getTime() });
                 if (items.length > MAX_ITEMS) items.length = MAX_ITEMS;
                 osLsSetEnc(CH_KEY, items);
+                // Smart Clipboard as Context: cuma item hasil COPY (bukan paste)
+                // yang relevan buat ditawarin sebagai "konteks siap tempel".
+                if (type === 'copy' && typeof window._scOnCopy === 'function') {
+                    try { window._scOnCopy(text); } catch (e) {}
+                }
             }
 
             document.addEventListener('copy', function() {
@@ -11591,6 +11717,7 @@ void loop() {
                     localStorage.setItem('osWallpaperMode', type);
                     await applyStoredWallpaper();
                     addOsNotification && addOsNotification('', 'Wallpaper Diperbarui', (type === 'video' ? 'Live wallpaper video' : 'Wallpaper gambar') + ` tersimpan di folder "${folder}".`);
+                    if (typeof window.__autoThemeOnWallpaperChange === 'function') window.__autoThemeOnWallpaperChange(file, type);
                 } else {
                     // ==== Fallback browser biasa: IndexedDB ====
                     if (!idb) await openIDB();
@@ -11604,6 +11731,7 @@ void loop() {
                     localStorage.setItem('osWallpaperMode', type);
                     await applyStoredWallpaper();
                     addOsNotification && addOsNotification('', 'Wallpaper Diperbarui', type === 'video' ? 'Live wallpaper video berhasil dipasang!' : 'Wallpaper gambar berhasil dipasang!');
+                    if (typeof window.__autoThemeOnWallpaperChange === 'function') window.__autoThemeOnWallpaperChange(file, type);
                 }
             } catch (e) {
                 addOsNotification && addOsNotification('', 'Gagal Menyimpan Wallpaper', 'Terjadi kesalahan saat menyimpan file. Coba file yang lebih kecil.');
@@ -30057,6 +30185,9 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
             diEl.style.display = 'flex';
             diEl.className = mode === 'expand' ? 'di-expand' : 'di-compact';
             diEl.classList.remove('di-peek');
+            // Dipake sama fitur Smart Clipboard (drag-to-paste) buat tau
+            // activity apa yang lagi ditampilin tanpa perlu expose registry.
+            diEl._currentActivity = act;
 
             const diIcon = document.getElementById('di-icon');
             const diTitle = document.getElementById('di-title');
@@ -30231,6 +30362,1458 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }, 1000);
 
         window.__dynamicIslandV2Ready = true;
+    })();
+    </script>
+
+    <!-- ================================================================
+         SMART CLIPBOARD AS CONTEXT
+         Deteksi tipe konten yang baru di-copy (URL / kode / warna hex /
+         teks biasa) terus nongolin badge di Dynamic Island (posisinya emang
+         nempel di taskbar) yang bisa langsung di-klik ATAU di-drag ke ikon
+         app lain di taskbar buat "paste" otomatis ke tempat yang paling
+         masuk akal. Numpang di infrastruktur yang udah ada:
+         - initClipboardHistory()  -> deteksi event copy (lewat window._scOnCopy)
+         - window.registerLiveActivity -> badge/pill di taskbar
+         - taskbar icons (#taskbar-apps) -> target drag-to-paste
+         Gak nambah storage/state baru — cuma numpang lewat.
+    ================================================================= -->
+    <script>
+    (function initSmartClipboard() {
+        'use strict';
+        const SC_ACTIVITY_ID = 'smart-clipboard';
+
+        function detectType(text) {
+            const t = (text || '').trim();
+            if (!t) return 'text';
+            // Warna hex: SELURUH isi clipboard persis kode warna, bukan cuma
+            // kalimat yang kebetulan ngandung tanda pagar di tengah.
+            if (/^#?[0-9a-f]{3}$|^#?[0-9a-f]{6}$/i.test(t)) return 'hexcolor';
+            // URL: satu baris, gak ada spasi, pola http(s)/www/domain.tld
+            if (!/\s/.test(t) && t.includes('.') &&
+                /^(https?:\/\/|www\.)\S+$|^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(t)) {
+                return 'url';
+            }
+            // Kode: tanda-tanda sintaks pemrograman yang jarang muncul barengan
+            // di kalimat manusia biasa.
+            const codeSignals = [/=>/, /\bfunction\b/, /\b(const|let|var)\b/, /[{};]/, /\bimport\b.+\bfrom\b/, /\bclass\b/, /\bdef\b/, /^\s*<\/?[a-z][\s\S]*>/i];
+            const hits = codeSignals.reduce((n, re) => n + (re.test(t) ? 1 : 0), 0);
+            if (hits >= 2 || (t.includes('\n') && hits >= 1)) return 'code';
+            return 'text';
+        }
+
+        function normalizeHex(t) {
+            let h = t.trim();
+            if (!h.startsWith('#')) h = '#' + h;
+            if (h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3];
+            return h.toLowerCase();
+        }
+
+        function labelFor(type, text) {
+            if (type === 'hexcolor') {
+                const hex = normalizeHex(text);
+                return {
+                    title: 'Warna ready',
+                    subtitle: hex + ' · Klik buat apply ke aksen OS',
+                    icon: '<div style="width:14px;height:14px;border-radius:50%;background:' + hex + ';border:1px solid rgba(255,255,255,.4);"></div>'
+                };
+            }
+            if (type === 'url') {
+                return { title: '1 URL ready', subtitle: 'Klik buat paste ke browser', icon: '<i class="fa-solid fa-link"></i>' };
+            }
+            if (type === 'code') {
+                return { title: 'Kode ready', subtitle: 'Klik buat paste ke Catatan', icon: '<i class="fa-solid fa-code"></i>' };
+            }
+            const n = text.trim().length;
+            return { title: 'Teks ready', subtitle: n + ' karakter · Klik buat lihat riwayat', icon: '<i class="fa-regular fa-clipboard"></i>' };
+        }
+
+        function notify(title, body) {
+            if (typeof addOsNotification === 'function') addOsNotification('', title, body);
+        }
+
+        // Buka (atau fokusin & un-minimize kalau lagi minimized) sebuah app window.
+        function ensureAppOpen(appId) {
+            if (typeof openWindow === 'function') openWindow(appId);
+            if (openWindows[appId] && openWindows[appId].minimized && typeof minimizeWindow === 'function') {
+                minimizeWindow(appId);
+            }
+        }
+
+        // "Paste" generik: taruh teks ke input/textarea/contenteditable yang
+        // paling masuk akal di dalam window app tujuan. Ini yang bikin
+        // drag-ke-app-manapun tetep jalan walau app-nya gak ada integrasi
+        // khusus kayak Browser/Catatan.
+        function pasteGenericIntoWindow(appId, text) {
+            const win = document.getElementById('win-' + appId);
+            if (!win) return false;
+            const target = win.querySelector('textarea, input[type="text"], input[type="search"], input:not([type]), [contenteditable="true"]');
+            if (!target) return false;
+            target.focus();
+            if (target.isContentEditable) {
+                document.execCommand('insertText', false, text);
+            } else {
+                const start = target.selectionStart != null ? target.selectionStart : target.value.length;
+                const end = target.selectionEnd != null ? target.selectionEnd : target.value.length;
+                target.value = target.value.slice(0, start) + text + target.value.slice(end);
+                target.selectionStart = target.selectionEnd = start + text.length;
+            }
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            return true;
+        }
+
+        function pasteToApp(appId, type, text) {
+            if (appId === 'browser') {
+                if (window.akhtarBrowser) {
+                    window.akhtarBrowser.show();
+                    window.akhtarBrowser.navigate(text);
+                }
+                return;
+            }
+            if (appId === 'notes') {
+                ensureAppOpen('notes');
+                setTimeout(() => {
+                    const ta = document.getElementById('notes-textarea') || document.querySelector('#win-notes textarea');
+                    if (!ta) return;
+                    ta.focus();
+                    const sep = ta.value && !ta.value.endsWith('\n') ? '\n' : '';
+                    ta.value = ta.value + sep + text;
+                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                    ta.scrollTop = ta.scrollHeight;
+                }, 260);
+                return;
+            }
+            ensureAppOpen(appId);
+            setTimeout(() => {
+                const ok = pasteGenericIntoWindow(appId, text);
+                if (!ok) notify('Smart Clipboard', 'App ini gak punya kolom teks yang bisa ditempel otomatis.');
+            }, 260);
+        }
+
+        function handleTap(type, text) {
+            if (type === 'hexcolor') {
+                const hex = normalizeHex(text);
+                if (typeof setAccent === 'function') setAccent(hex);
+                notify('Smart Clipboard', 'Aksen OS diganti ke ' + hex);
+                return;
+            }
+            if (type === 'url') { pasteToApp('browser', type, text); return; }
+            if (type === 'code') { pasteToApp('notes', type, text); return; }
+            if (typeof window.openClipboardHistoryApp === 'function') window.openClipboardHistoryApp();
+        }
+
+        // Dipanggil dari initClipboardHistory() tiap ada teks baru ke-copy —
+        // biar gak perlu pasang listener copy/paste kedua kalinya di sini.
+        window._scOnCopy = function (text) {
+            if (typeof window.registerLiveActivity !== 'function') return;
+            const type = detectType(text);
+            const label = labelFor(type, text);
+            window.registerLiveActivity(SC_ACTIVITY_ID, {
+                icon: label.icon,
+                title: label.title,
+                subtitle: label.subtitle,
+                priority: 7,
+                autoCompactMs: 3500,
+                ttlMs: 20000,
+                dragPayload: { type, text },
+                onTap: function () { handleTap(type, text); }
+            });
+        };
+
+        // --- Drag-to-paste: dari pill Dynamic Island ke ikon app di taskbar ---
+        const diEl = document.getElementById('dynamic-island');
+        const taskbarApps = document.getElementById('taskbar-apps');
+
+        if (diEl) {
+            diEl.setAttribute('draggable', 'true');
+            diEl.addEventListener('dragstart', function (e) {
+                // Cuma bisa di-drag kalau yang lagi ditampilin emang badge
+                // Smart Clipboard — activity lain (musik, timer, dst) tetep
+                // gak bisa ke-drag biar gak nyasar/nge-bug UI mereka.
+                const act = diEl._currentActivity;
+                if (!act || act.id !== SC_ACTIVITY_ID || !act.dragPayload) { e.preventDefault(); return; }
+                e.dataTransfer.effectAllowed = 'copy';
+                e.dataTransfer.setData('text/plain', act.dragPayload.text);
+                e.dataTransfer.setData('application/x-akhtaros-smart-clipboard', JSON.stringify(act.dragPayload));
+            });
+        }
+
+        if (taskbarApps) {
+            taskbarApps.addEventListener('dragover', function (e) {
+                const icon = e.target.closest('.taskbar-icon');
+                if (!icon) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                icon.style.outline = '2px solid #22d3ee';
+            });
+            taskbarApps.addEventListener('dragleave', function (e) {
+                const icon = e.target.closest('.taskbar-icon');
+                if (icon) icon.style.outline = '';
+            });
+            taskbarApps.addEventListener('drop', function (e) {
+                const icon = e.target.closest('.taskbar-icon');
+                if (!icon) return;
+                e.preventDefault();
+                icon.style.outline = '';
+                let payload = null;
+                try { payload = JSON.parse(e.dataTransfer.getData('application/x-akhtaros-smart-clipboard') || 'null'); } catch (err) {}
+                const text = payload ? payload.text : e.dataTransfer.getData('text/plain');
+                if (!text) return;
+                const appId = icon.id.indexOf('tb-') === 0 ? icon.id.slice(3) : null;
+                if (!appId) return;
+                pasteToApp(appId, payload ? payload.type : detectType(text), text);
+                if (typeof window.unregisterLiveActivity === 'function') window.unregisterLiveActivity(SC_ACTIVITY_ID);
+            });
+        }
+    })();
+    </script>
+
+    <!-- ================================================================
+         INSTANT SCREENSHOT + OCR (Ctrl+Shift+S)
+         - Ctrl+Shift+S      : pilih area (crosshair, drag) -> clipboard + OCR
+         - Ctrl+Alt+Shift+S  : full screen -> auto-save ke "Pictures" + notif
+         - Ctrl+Shift+A      : screenshot window yang lagi aktif
+         - Ctrl+Shift+H      : buka Screenshot History (20 terakhir)
+         Numpang di infrastruktur yang udah ada: win.webContents.capturePage()
+         (lewat IPC akhtarScreenshot.captureWindow, pola yang sama kayak POV
+         capture di Data Poisoning Engine/Search Bot), window.registerLiveActivity
+         (badge di Dynamic Island, sama kayak Smart Clipboard), idbGet/idbSet
+         (penyimpanan riwayat), dan akhtarFS (nyimpen file screenshot penuh).
+         OCR pake Tesseract.js (lokal di browser, gratis, TANPA API AI berbayar).
+    ================================================================= -->
+    <style>
+        #ss-overlay { position: fixed; inset: 0; z-index: 999999; cursor: crosshair; user-select: none; }
+        #ss-overlay img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; display: block; }
+        #ss-selection { position: absolute; border: 1.5px solid #22d3ee; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); display: none; pointer-events: none; }
+        #ss-hint { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.75); color: #fff; padding: 7px 16px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+    </style>
+    <script>
+    (function initInstantScreenshot() {
+        'use strict';
+        const SS_ACTIVITY_ID = 'instant-screenshot';
+        const SS_MAX_ITEMS = 20;
+        const SS_THUMB_WIDTH = 360;
+
+        function hasBridge() { return !!(window.akhtarScreenshot && window.akhtarScreenshot.captureWindow); }
+
+        function notify(title, body) {
+            if (typeof addOsNotification === 'function') addOsNotification('', title, body);
+        }
+
+        // ---------- OCR (Tesseract.js, lazy singleton worker) ----------
+        let ocrWorkerPromise = null;
+        function getOcrWorker() {
+            if (!ocrWorkerPromise) {
+                if (typeof Tesseract === 'undefined') return Promise.resolve(null);
+                ocrWorkerPromise = Tesseract.createWorker('eng+ind').catch(() => null);
+            }
+            return ocrWorkerPromise;
+        }
+        async function runOcr(dataUrl) {
+            try {
+                const worker = await getOcrWorker();
+                if (!worker) return '';
+                const result = await worker.recognize(dataUrl);
+                return ((result && result.data && result.data.text) || '').trim();
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // ---------- Deteksi tipe teks hasil OCR (URL / kode / tabel / teks) ----------
+        function looksLikeUrl(t) {
+            return !/\s/.test(t) && t.includes('.') &&
+                /^(https?:\/\/|www\.)\S+$|^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(t);
+        }
+        function looksLikeCode(t) {
+            const signals = [/=>/, /\bfunction\b/, /\b(const|let|var)\b/, /[{};]/, /\bimport\b.+\bfrom\b/, /\bclass\b/, /\bdef\b/];
+            const hits = signals.reduce((n, re) => n + (re.test(t) ? 1 : 0), 0);
+            return hits >= 2 || (t.includes('\n') && hits >= 1);
+        }
+        function looksLikeTable(t) {
+            const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+            if (lines.length < 2) return false;
+            const colCounts = lines.map(l => l.split(/\s{2,}|\t/).filter(Boolean).length);
+            const consistent = colCounts.filter(c => c === colCounts[0]).length;
+            return colCounts[0] >= 2 && consistent >= lines.length * 0.7;
+        }
+        function toCSV(t) {
+            return t.split('\n').map(l => l.trim()).filter(Boolean)
+                .map(l => l.split(/\s{2,}|\t/).filter(Boolean).map(c => '"' + c.replace(/"/g, '""') + '"').join(','))
+                .join('\n');
+        }
+        function classifyOcrText(raw) {
+            const t = (raw || '').trim();
+            if (!t) return { type: 'text', clipText: '' };
+            if (looksLikeTable(t)) return { type: 'table', clipText: toCSV(t) };
+            if (looksLikeUrl(t)) return { type: 'url', clipText: t };
+            if (looksLikeCode(t)) return { type: 'code', clipText: t };
+            return { type: 'text', clipText: t };
+        }
+
+        // ---------- Clipboard: gambar + teks SEKALIGUS dalam 1 entry ----------
+        async function writeImageAndText(blob, text) {
+            try {
+                const parts = { 'image/png': blob };
+                if (text) parts['text/plain'] = new Blob([text], { type: 'text/plain' });
+                await navigator.clipboard.write([new ClipboardItem(parts)]);
+                return true;
+            } catch (e) {
+                // Fallback: minimal teksnya kepaste walau gambar gagal ditulis.
+                try { if (text && window._chRawWriteText) await window._chRawWriteText(text); } catch (e2) {}
+                return false;
+            }
+        }
+
+        // ---------- Riwayat screenshot (IndexedDB, maks 20) ----------
+        function downscale(dataUrl, maxWidth) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const scale = Math.min(1, maxWidth / img.naturalWidth);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(img.naturalWidth * scale);
+                    canvas.height = Math.round(img.naturalHeight * scale);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.72));
+                };
+                img.onerror = function () { resolve(dataUrl); };
+                img.src = dataUrl;
+            });
+        }
+        async function pushHistory(dataUrl, type, text) {
+            if (typeof idbGet !== 'function' || typeof idbSet !== 'function') return;
+            const thumb = await downscale(dataUrl, SS_THUMB_WIDTH);
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' · ' + now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+            let items = (await idbGet('screenshotHistory')) || [];
+            items.unshift({ thumb, fullDataUrl: dataUrl, type, text: (text || '').slice(0, 4000), time: timeStr, ts: now.getTime() });
+            if (items.length > SS_MAX_ITEMS) items.length = SS_MAX_ITEMS;
+            await idbSet('screenshotHistory', items);
+        }
+        window._ssRecopy = async function (item) {
+            const blob = await dataURLToBlob(item.fullDataUrl || item.thumb);
+            const ok = await writeImageAndText(blob, item.text || '');
+            notify('Screenshot', ok ? 'Screenshot & teks disalin ulang ke clipboard.' : 'Teks disalin ulang (gambar gagal).');
+        };
+
+        // ---------- Badge Dynamic Island + aksi cepat ----------
+        function labelFor(type, text) {
+            if (type === 'url') return { title: 'Screenshot · URL', subtitle: text.length > 40 ? text.slice(0, 40) + '…' : text, icon: '<i class="fa-solid fa-link"></i>' };
+            if (type === 'table') return { title: 'Screenshot · Tabel', subtitle: 'Disalin sebagai CSV', icon: '<i class="fa-solid fa-table"></i>' };
+            if (type === 'code') return { title: 'Screenshot · Kode', subtitle: 'Disalin sebagai teks', icon: '<i class="fa-solid fa-code"></i>' };
+            if (text) return { title: 'Screenshot · Teks', subtitle: (text.length > 40 ? text.slice(0, 40) + '…' : text), icon: '<i class="fa-solid fa-camera-retro"></i>' };
+            return { title: 'Screenshot disalin', subtitle: 'Gambar ready di clipboard', icon: '<i class="fa-solid fa-camera-retro"></i>' };
+        }
+        function showResultBadge(type, text) {
+            if (typeof window.registerLiveActivity !== 'function') return;
+            const label = labelFor(type, text || '');
+            const cfg = {
+                icon: label.icon, title: label.title, subtitle: label.subtitle,
+                priority: 8, autoCompactMs: 3500, ttlMs: 20000
+            };
+            if (type === 'url') {
+                cfg.actionIcon = '<i class="fa-solid fa-arrow-up-right-from-square"></i>';
+                cfg.onAction = function () {
+                    if (window.akhtarBrowser) { window.akhtarBrowser.show(); window.akhtarBrowser.navigate(text); }
+                };
+                cfg.onTap = cfg.onAction;
+            } else {
+                cfg.onTap = function () {
+                    if (typeof openWindow === 'function') openWindow('screenshothistory');
+                };
+            }
+            window.registerLiveActivity(SS_ACTIVITY_ID, cfg);
+        }
+
+        // ---------- Pipeline umum: dataURL hasil crop -> clipboard + OCR + history ----------
+        async function finalizeCapture(dataUrl) {
+            const blob = await dataURLToBlob(dataUrl);
+            // Clipboard gambar ditulis DULUAN tanpa nunggu OCR, biar user bisa
+            // langsung paste gambarnya walau OCR masih jalan di background.
+            await writeImageAndText(blob, '');
+            const ocrText = await runOcr(dataUrl);
+            const { type, clipText } = classifyOcrText(ocrText);
+            if (clipText) await writeImageAndText(blob, clipText);
+            showResultBadge(type, clipText);
+            pushHistory(dataUrl, type, clipText);
+        }
+
+        // ---------- Crop dari full-window dataURL ke rect CSS-px tertentu ----------
+        function cropDataUrl(fullDataUrl, rectCss, cssWidth, cssHeight) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = function () {
+                    const scaleX = img.naturalWidth / cssWidth;
+                    const scaleY = img.naturalHeight / cssHeight;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(rectCss.w * scaleX));
+                    canvas.height = Math.max(1, Math.round(rectCss.h * scaleY));
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, rectCss.x * scaleX, rectCss.y * scaleY, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = function () { resolve(fullDataUrl); };
+                img.src = fullDataUrl;
+            });
+        }
+
+        // ---------- Mode 1: pilih area (crosshair, drag) ----------
+        async function captureRegion() {
+            if (!hasBridge()) { notify('Screenshot', 'Fitur screenshot belum siap (bridge gak ketemu).'); return; }
+            const fullDataUrl = await window.akhtarScreenshot.captureWindow();
+            if (!fullDataUrl) return;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'ss-overlay';
+            overlay.innerHTML = '<img src="' + fullDataUrl + '"><div id="ss-selection"></div><div id="ss-hint">Drag buat pilih area · Esc buat batal</div>';
+            document.body.appendChild(overlay);
+
+            const selEl = overlay.querySelector('#ss-selection');
+            let startX = 0, startY = 0, dragging = false;
+
+            function onMouseDown(e) {
+                dragging = true;
+                startX = e.clientX; startY = e.clientY;
+                selEl.style.left = startX + 'px'; selEl.style.top = startY + 'px';
+                selEl.style.width = '0px'; selEl.style.height = '0px';
+                selEl.style.display = 'block';
+            }
+            function onMouseMove(e) {
+                if (!dragging) return;
+                const x = Math.min(e.clientX, startX), y = Math.min(e.clientY, startY);
+                const w = Math.abs(e.clientX - startX), h = Math.abs(e.clientY - startY);
+                selEl.style.left = x + 'px'; selEl.style.top = y + 'px';
+                selEl.style.width = w + 'px'; selEl.style.height = h + 'px';
+            }
+            async function onMouseUp(e) {
+                if (!dragging) return;
+                dragging = false;
+                const x = Math.min(e.clientX, startX), y = Math.min(e.clientY, startY);
+                const w = Math.abs(e.clientX - startX), h = Math.abs(e.clientY - startY);
+                cleanup();
+                if (w < 6 || h < 6) return; // area kegatelan/klik doang, dianggap batal
+                const cropped = await cropDataUrl(fullDataUrl, { x, y, w, h }, overlay.clientWidth, overlay.clientHeight);
+                finalizeCapture(cropped);
+            }
+            function onKeyDown(e) {
+                if (e.key === 'Escape') { e.preventDefault(); cleanup(); }
+            }
+            function cleanup() {
+                overlay.removeEventListener('mousedown', onMouseDown);
+                overlay.removeEventListener('mousemove', onMouseMove);
+                overlay.removeEventListener('mouseup', onMouseUp);
+                document.removeEventListener('keydown', onKeyDown, true);
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }
+            overlay.addEventListener('mousedown', onMouseDown);
+            overlay.addEventListener('mousemove', onMouseMove);
+            overlay.addEventListener('mouseup', onMouseUp);
+            document.addEventListener('keydown', onKeyDown, true);
+        }
+
+        // ---------- Mode 2: full screen -> auto-save ke "Pictures" + notif ----------
+        async function captureFullScreen() {
+            if (!hasBridge()) return;
+            const fullDataUrl = await window.akhtarScreenshot.captureWindow();
+            if (!fullDataUrl) return;
+            const blob = await dataURLToBlob(fullDataUrl);
+            await writeImageAndText(blob, '');
+
+            const now = new Date();
+            const stamp = now.toISOString().replace(/[:.]/g, '-');
+            const fileName = 'Screenshot_' + stamp + '.png';
+            let savedPath = null;
+            try {
+                if (window.akhtarFS && typeof window.akhtarFS.writeBinary === 'function') {
+                    const base64 = fullDataUrl.split(',')[1] || '';
+                    const relPath = 'Pictures/' + fileName;
+                    const ok = await window.akhtarFS.writeBinary(relPath, base64);
+                    if (ok) savedPath = relPath;
+                }
+            } catch (e) {}
+
+            notify('Screenshot Full Screen', savedPath ? ('Disimpan ke ' + savedPath + ' & disalin ke clipboard.') : 'Disalin ke clipboard (gagal nyimpen ke file).');
+
+            const ocrText = await runOcr(fullDataUrl);
+            const { type, clipText } = classifyOcrText(ocrText);
+            if (clipText) await writeImageAndText(blob, clipText);
+            pushHistory(fullDataUrl, type, clipText);
+        }
+
+        // ---------- Mode 3: window yang lagi aktif ----------
+        async function captureActiveWindow() {
+            if (!hasBridge()) return;
+            const appId = (typeof wfGetActiveWindowAppId === 'function') ? wfGetActiveWindowAppId() : null;
+            if (!appId) { notify('Screenshot', 'Gak ada window aktif buat di-screenshot.'); return; }
+            const winEl = document.getElementById('win-' + appId);
+            if (!winEl) return;
+            const rect = winEl.getBoundingClientRect();
+            const fullDataUrl = await window.akhtarScreenshot.captureWindow();
+            if (!fullDataUrl) return;
+            const cropped = await cropDataUrl(fullDataUrl, { x: rect.left, y: rect.top, w: rect.width, h: rect.height }, window.innerWidth, window.innerHeight);
+            finalizeCapture(cropped);
+        }
+
+        // ---------- Shortcut ----------
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.shiftKey && e.altKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                captureFullScreen();
+                return;
+            }
+            if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                captureRegion();
+                return;
+            }
+            if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'a') {
+                e.preventDefault();
+                captureActiveWindow();
+                return;
+            }
+            if (e.ctrlKey && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'h') {
+                e.preventDefault();
+                if (typeof openWindow === 'function') openWindow('screenshothistory');
+                return;
+            }
+        });
+    })();
+    </script>
+
+    <!-- ================================================================
+         MOOD-DRIVEN UI
+         BUKAN AI/sentiment-analysis dari teks — murni: (1) user declare mood
+         sendiri pas login (dicatat otomatis ke Mood Journal yang udah ada,
+         key osMoodJournalEntries), dan (2) if/else sederhana dari sinyal
+         PASIF (banyak backspace, buka app yang sama berkali-kali, kerja
+         lama tanpa jeda). Numpang: mjLoad/mjSave (Mood Journal),
+         window.setFocusMode (Focus Mode yang udah ada), setAccent/applyFontSize
+         (personalisasi yang udah ada), registerLiveActivity (Dynamic Island).
+         Default OFF — aktif cuma kalau di-ON-in di Settings.
+    ================================================================= -->
+    <script>
+    (function initMoodDrivenUI() {
+        'use strict';
+        const MDU_KEY = 'osMoodDrivenUiEnabled';
+        const MDU_LAST_PROMPT_KEY = 'osMoodDrivenUiLastPromptDate';
+        const MDU_CURRENT_MOOD_KEY = 'osMoodDrivenUiCurrentMood';
+
+        const MOODS = {
+            senang: { emoji: '😊', label: 'Senang', journalScale: 5 },
+            biasa: { emoji: '😐', label: 'Biasa', journalScale: 3 },
+            sedih: { emoji: '😞', label: 'Sedih', journalScale: 1 },
+            marah: { emoji: '😡', label: 'Marah', journalScale: 2 },
+            ngantuk: { emoji: '😴', label: 'Ngantuk', journalScale: 2 }
+        };
+
+        function isEnabled() { return localStorage.getItem(MDU_KEY) === 'true'; }
+        function todayStr() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+        function notify(title, body) { if (typeof addOsNotification === 'function') addOsNotification('', title, body); }
+
+        window.toggleMoodDrivenUI = function (el) {
+            el.classList.toggle('on');
+            const on = el.classList.contains('on');
+            localStorage.setItem(MDU_KEY, on ? 'true' : 'false');
+            if (!on) {
+                // Balikin OS ke kondisi netral pas fiturnya dimatiin — cuma yang
+                // dipengaruhi sinyal PASIF (dim kerja kelamaan), bukan aksen warna
+                // yang mungkin emang disukai user.
+                mduDimFilterStr = '';
+                applyDesktopFilter();
+            }
+        };
+
+        // ---------- Kompositing filter desktop (mood-tint + auto-dim) ----------
+        // Dipisah 2 variabel biar auto-dim (kerja >2 jam) gak numpuk-nimpa
+        // tint warna dari mood yang lagi aktif, atau sebaliknya.
+        let mduMoodFilterStr = '';
+        let mduDimFilterStr = '';
+        function applyDesktopFilter() {
+            const d = document.getElementById('desktop');
+            if (!d) return;
+            d.style.filter = (mduMoodFilterStr + ' ' + mduDimFilterStr).trim();
+        }
+
+        // ---------- Suara mood (generik, gak digembok osWibuMode kayak playWibuChime) ----------
+        function playMoodChime(mood) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const patterns = { senang: [523, 659, 784], biasa: [440], sedih: [349], marah: [392], ngantuk: [330] };
+                const pattern = patterns[mood] || patterns.biasa;
+                pattern.forEach(function (freq, i) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    const t0 = ctx.currentTime + i * 0.15;
+                    gain.gain.setValueAtTime(0.001, t0);
+                    gain.gain.linearRampToValueAtTime(pattern.length > 1 ? 0.07 : 0.045, t0 + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.4);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(t0); osc.stop(t0 + 0.45);
+                });
+            } catch (e) {}
+        }
+
+        // ---------- Efek visual per mood ----------
+        function applyMoodVisuals(key) {
+            if (key === 'senang') {
+                if (typeof setAccent === 'function') setAccent('#f97316');
+                mduMoodFilterStr = 'saturate(1.15) brightness(1.04)';
+                if (typeof applyFontSize === 'function') applyFontSize(14);
+            } else if (key === 'biasa') {
+                mduMoodFilterStr = '';
+            } else {
+                // sedih, marah, ngantuk: bikin lebih tenang & gak berisik
+                if (key === 'sedih' && typeof setAccent === 'function') setAccent('#64748b');
+                mduMoodFilterStr = 'saturate(0.78) brightness(0.94)';
+                if (typeof applyFontSize === 'function') applyFontSize(key === 'sedih' ? 17 : 14);
+                if (key === 'sedih' && typeof wfGetActiveWindowAppId === 'function' && typeof minimizeWindow === 'function' && typeof openWindows === 'object') {
+                    // "auto-minimize clutter": sisain cuma window yang lagi aktif.
+                    const activeId = wfGetActiveWindowAppId();
+                    Object.keys(openWindows).forEach(function (id) {
+                        if (id !== activeId && openWindows[id] && !openWindows[id].minimized) minimizeWindow(id);
+                    });
+                }
+            }
+            applyDesktopFilter();
+        }
+
+        // ---------- Saran kontekstual per mood (Dynamic Island) ----------
+        function showMoodSuggestion(key) {
+            if (typeof window.registerLiveActivity !== 'function') return;
+            const cfgs = {
+                marah: {
+                    icon: '<i class="fa-solid fa-brain"></i>', title: 'Lagi kesel ya?', subtitle: 'Aktifin Focus Mode?',
+                    priority: 9, autoCompactMs: 4000, ttlMs: 25000, actionIcon: '<i class="fa-solid fa-check"></i>',
+                    onAction: function () { if (typeof window.setFocusMode === 'function') window.setFocusMode('personal'); },
+                    onTap: function () { if (typeof window.setFocusMode === 'function') window.setFocusMode('personal'); }
+                },
+                ngantuk: { icon: '<i class="fa-solid fa-mug-hot"></i>', title: 'Ngantuk nih?', subtitle: 'Coba break, jalan 5 menit yuk', priority: 9, autoCompactMs: 4000, ttlMs: 25000 },
+                sedih: { icon: '<i class="fa-solid fa-heart"></i>', title: 'Semangat ya', subtitle: 'Pelan-pelan aja, gapapa kok', priority: 7, autoCompactMs: 4000, ttlMs: 20000 },
+                senang: { icon: '<i class="fa-solid fa-sun"></i>', title: 'Semangat!', subtitle: 'Yuk gaskeun hari ini', priority: 6, autoCompactMs: 3000, ttlMs: 12000 }
+            };
+            const cfg = cfgs[key];
+            if (cfg) window.registerLiveActivity('mood-suggest', cfg);
+        }
+
+        // ---------- Catat ke Mood Journal yang UDAH ADA (bukan bikin store baru) ----------
+        function recordToMoodJournal(key) {
+            if (typeof mjLoad !== 'function' || typeof mjSave !== 'function') return;
+            try {
+                const data = mjLoad();
+                const dateKey = todayStr();
+                // format kunci Mood Journal aslinya YYYY-MM-DD (mjKey pad 2 digit),
+                // tapi todayStr() di atas gak di-pad -- samain manual biar konsisten:
+                const now = new Date();
+                const pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+                const properKey = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+                const existing = data[properKey] || {};
+                data[properKey] = {
+                    mood: MOODS[key].journalScale,
+                    note: existing.note || ('(otomatis dari Mood-Driven UI: ' + MOODS[key].label + ')'),
+                    ts: existing.ts || Date.now(),
+                    moodDrivenUiMood: key
+                };
+                mjSave(data);
+                if (typeof window.initMoodJournalUI === 'function') {
+                    try { window.initMoodJournalUI(); } catch (e) {}
+                }
+            } catch (e) {}
+        }
+
+        function pickMood(key, wasForced) {
+            if (!MOODS[key]) return;
+            localStorage.setItem(MDU_CURRENT_MOOD_KEY, key);
+            localStorage.setItem(MDU_LAST_PROMPT_KEY, todayStr());
+            recordToMoodJournal(key);
+            applyMoodVisuals(key);
+            showMoodSuggestion(key);
+            playMoodChime(key);
+            notify('Mood Journal', 'Mood hari ini: ' + MOODS[key].emoji + ' ' + MOODS[key].label + ' — OS udah nyesuain tampilan.');
+            closePrompt();
+        }
+
+        // ---------- Modal tanya mood ----------
+        function closePrompt() {
+            const el = document.getElementById('mdu-modal-overlay');
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        }
+        window.mduShowPrompt = function (force) {
+            if (!force) {
+                if (!isEnabled()) return;
+                if (localStorage.getItem(MDU_LAST_PROMPT_KEY) === todayStr()) return;
+            }
+            if (document.getElementById('mdu-modal-overlay')) return;
+            const overlay = document.createElement('div');
+            overlay.id = 'mdu-modal-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:999998;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;';
+            const moodBtns = Object.keys(MOODS).map(function (key) {
+                const m = MOODS[key];
+                return '<button onclick="window._mduPick(\'' + key + '\')" style="display:flex;flex-direction:column;align-items:center;gap:4px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;cursor:pointer;min-width:64px;" onmouseover="this.style.background=\'#e5e7eb\'" onmouseout="this.style.background=\'#f3f4f6\'">' +
+                    '<span style="font-size:26px;">' + m.emoji + '</span><span style="font-size:11px;font-weight:600;color:#374151;">' + m.label + '</span></button>';
+            }).join('');
+            overlay.innerHTML =
+                '<div style="background:#fff;border-radius:16px;padding:24px 26px;max-width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35);">' +
+                '<div style="font-weight:700;font-size:16px;margin-bottom:4px;color:#111827;">Lagi gimana perasaan kamu?</div>' +
+                '<div style="font-size:11px;color:#888;margin-bottom:16px;">OS bakal nyesuain tampilan &amp; kasih saran sesuai mood kamu. Bukan AI, ini murni pilihan kamu sendiri.</div>' +
+                '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">' + moodBtns + '</div>' +
+                '<div style="margin-top:14px;"><button onclick="window._mduSkip()" style="background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;">Lewati</button></div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+        };
+        window._mduPick = function (key) { pickMood(key); };
+        window._mduSkip = function () {
+            localStorage.setItem(MDU_LAST_PROMPT_KEY, todayStr());
+            closePrompt();
+        };
+
+        // ---------- Sync visual toggle Settings (murah: 1 DOM lookup/detik) ----------
+        setInterval(function () {
+            const t = document.getElementById('mood-driven-ui-toggle');
+            if (t) t.classList.toggle('on', isEnabled());
+        }, 1000);
+
+        // ---------- Sinyal pasif #1: banyak Backspace beruntun -> tawarin break ----------
+        let bkTimes = [], totalTimes = [], lastBreakSuggestTs = 0;
+        document.addEventListener('keydown', function (e) {
+            if (!isEnabled()) return;
+            const now = Date.now();
+            totalTimes.push(now);
+            if (e.key === 'Backspace') bkTimes.push(now);
+            const cutoff = now - 60000;
+            bkTimes = bkTimes.filter(function (t) { return t > cutoff; });
+            totalTimes = totalTimes.filter(function (t) { return t > cutoff; });
+            if (bkTimes.length >= 20 && bkTimes.length > totalTimes.length * 0.35 && now - lastBreakSuggestTs > 5 * 60000) {
+                lastBreakSuggestTs = now;
+                if (typeof window.registerLiveActivity === 'function') {
+                    window.registerLiveActivity('mood-suggest', {
+                        icon: '<i class="fa-solid fa-face-tired"></i>', title: 'Kayaknya lagi susah nih', subtitle: 'Mau istirahat bentar?',
+                        priority: 8, autoCompactMs: 4000, ttlMs: 20000
+                    });
+                }
+            }
+        }, true);
+
+        // ---------- Sinyal pasif #2: buka app yang sama berkali-kali -> "ganti pendekatan?" ----------
+        // Catatan: dilacak di level app/window (bukan per-file di dalam File
+        // Manager, karena belum ada tracking buka-file individual di sana) —
+        // proxy paling aman & konsisten pake fungsi openWindow yang udah ada.
+        let appOpenTimes = {}, lastStuckSuggestTs = 0;
+        if (typeof window.openWindow === 'function' && !window.__mduWrappedOpenWindow) {
+            const origOpenWindow = window.openWindow;
+            window.openWindow = function (appId) {
+                if (isEnabled()) {
+                    const now = Date.now();
+                    const arr = (appOpenTimes[appId] || []).filter(function (t) { return now - t < 10 * 60000; });
+                    arr.push(now);
+                    appOpenTimes[appId] = arr;
+                    if (arr.length >= 5 && now - lastStuckSuggestTs > 10 * 60000) {
+                        lastStuckSuggestTs = now;
+                        if (typeof window.registerLiveActivity === 'function') {
+                            window.registerLiveActivity('mood-suggest', {
+                                icon: '<i class="fa-solid fa-arrows-rotate"></i>', title: 'Muter-muter di sini terus ya?', subtitle: 'Coba ganti pendekatan?',
+                                priority: 8, autoCompactMs: 4000, ttlMs: 20000
+                            });
+                        }
+                    }
+                }
+                return origOpenWindow.apply(this, arguments);
+            };
+            window.__mduWrappedOpenWindow = true;
+        }
+
+        // ---------- Sinyal pasif #3: kerja >2 jam non-stop tanpa jeda -> auto-dim ----------
+        let mduLastActivityTs = Date.now();
+        let mduContinuousStart = Date.now();
+        let mduDimApplied = false;
+        const MDU_BREAK_IDLE_MS = 5 * 60000;
+        const MDU_WORK_LIMIT_MS = 2 * 60 * 60000;
+        ['mousemove', 'keydown', 'mousedown', 'wheel', 'touchstart'].forEach(function (evt) {
+            document.addEventListener(evt, function () { mduLastActivityTs = Date.now(); }, { passive: true });
+        });
+        setInterval(function () {
+            if (!isEnabled()) {
+                if (mduDimApplied) { mduDimFilterStr = ''; applyDesktopFilter(); mduDimApplied = false; }
+                return;
+            }
+            const now = Date.now();
+            if (now - mduLastActivityTs > MDU_BREAK_IDLE_MS) {
+                mduContinuousStart = now;
+                if (mduDimApplied) { mduDimFilterStr = ''; applyDesktopFilter(); mduDimApplied = false; }
+                return;
+            }
+            if (!mduDimApplied && (now - mduContinuousStart) > MDU_WORK_LIMIT_MS) {
+                mduDimApplied = true;
+                mduDimFilterStr = 'brightness(0.72)';
+                applyDesktopFilter();
+                notify('Udah 2 jam lho', 'Coba istirahat bentar, mata & pikiran butuh jeda.');
+                if (typeof window.registerLiveActivity === 'function') {
+                    window.registerLiveActivity('mood-suggest', {
+                        icon: '<i class="fa-solid fa-mug-hot"></i>', title: 'Udah 2 jam nih', subtitle: 'Istirahat bentar yuk',
+                        priority: 9, autoCompactMs: 4000, ttlMs: 25000
+                    });
+                }
+            }
+        }, 30000);
+    })();
+    </script>
+
+    <!-- ================================================================
+         SMART REPLY (Chat Auto-Suggest)
+         BUKAN AI/baca-konteks-chat — murni deteksi kata kunci (kalimat
+         tanya/ajakan/sapaan/info/permintaan) + daftar balasan siap pakai
+         (~300 kata, Indonesia). Muncul sebagai chip di atas kolom teks yang
+         lagi difokus (Notes, Chat app, form apa aja), plus pill ambient di
+         Dynamic Island. Klik chip -> insert ke input + weight-nya naik;
+         yang jarang dipilih pelan-pelan turun urutannya.
+    ================================================================= -->
+    <style>
+        #smartreply-bar { position: fixed; z-index: 999997; display: flex; gap: 6px; flex-wrap: wrap; max-width: min(420px, calc(100vw - 24px)); padding: 6px; }
+        .smartreply-chip { background: #18181b; color: #e4e4e7; border: 1px solid #3f3f46; border-radius: 999px; padding: 6px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.25); transition: background .12s, transform .12s; }
+        .smartreply-chip:hover { background: #27272a; transform: translateY(-1px); }
+    </style>
+    <script>
+    (function initSmartReply() {
+        'use strict';
+        const SR_ACTIVITY_ID = 'smart-reply';
+        const SR_MAX_CHIPS = 6;
+
+        // ~300 kata total, Indonesia doang — bank ini yang bikin orang ngira
+        // "AI baca konteks", padahal cuma array + if/else di bawah.
+        const BANKS = {
+            tanya: ["Iya", "Enggak", "Nanti", "Oke", "Bentar", "Boleh", "Gak tau", "Coba dulu ya", "Kayaknya iya", "Kayaknya enggak", "Masih mikir", "Udah", "Belum", "Siap", "Aman", "Gas", "Santai aja", "Nanti aku kabarin", "Bisa jadi", "Tergantung", "Kalau bisa iya", "Sabar dulu ya", "Cek dulu ya", "Nunggu konfirmasi", "Insyaallah bisa", "Coba tanya lagi", "Hmm bentar", "Oke deh", "Yaudah", "Gapapa", "Fine", "Boleh banget", "Kurang yakin", "Nanti aku cek", "Sepertinya bisa", "Sepertinya enggak", "Belum tau juga", "Coba nanti ya", "Aku usahain", "Masih nunggu kabar", "Belum pasti"],
+            ajakan: ["Gas", "Oke", "Bentar", "Maaf gak bisa", "Otw", "Siap meluncur", "Boleh nih", "Ikut", "Kapan?", "Jam berapa?", "Dimana?", "Aku telat dikit", "Duluan aja", "Nanti nyusul", "Fix", "Mantap gas", "Yuk", "Cus", "Lanjut", "Setuju", "Aku out dulu", "Lain kali ya", "Aku pass dulu", "Sori lagi sibuk", "Nanti kabarin aku", "Oke siap-siap", "Boleh banget yuk", "Gas terus", "Aku ikutan", "Nanti aku susul", "Oke aku otw", "Sori gak sempet", "Kapan-kapan aja ya", "Aku standby", "Siap gaskeun"],
+            sapaan: ["Halo", "Hai", "Pagi juga", "Siang juga", "Sore juga", "Malam juga", "Woy", "Eh halo", "Permisi", "Iya kak", "Iya bang", "Ada apa?", "Apa kabar?", "Baik, kamu?", "Lagi sibuk gak?", "Boleh nanya?", "Ada yang bisa dibantu?", "Wih lama gak ketemu", "Kangen", "Halo juga", "Hai juga", "Pagi", "Siang", "Sore", "Malam", "Eh hai", "Selamat pagi", "Selamat siang", "Selamat sore", "Selamat malam"],
+            info: ["Oke noted", "Thanks infonya", "Sip", "Siap noted", "Makasih infonya", "Oke aku catat", "Baik, dimengerti", "Noted ya", "Wah makasih infonya", "Oke aku update juga", "Sip mantap", "Thanks ya", "Terima kasih infonya", "Baik siap", "Ok noted banget", "Sip siap", "Oke paham", "Makasih udah kasih tau", "Baik noted", "Oke aku simpen infonya"],
+            permintaan: ["Oke siap", "Bisa", "Maaf gak bisa", "Siap bantu", "Oke aku bantu", "Tunggu bentar ya", "Nanti aku bantu", "Siap laksanakan", "Bisa kok", "Maaf lagi repot", "Nanti ya", "Oke aku kerjain", "Siap gas", "Aku usahain", "Coba dulu ya", "Bisa banget", "Siap, bentar ya", "Oke aku bantuin", "Maaf lagi gak sempet", "Nanti aku bantuin"]
+        };
+        const CATEGORY_LABEL = { tanya: 'Kalimat tanya', ajakan: 'Ajakan', sapaan: 'Sapaan', info: 'Info', permintaan: 'Permintaan' };
+
+        // ---------- State (enabled + weight belajar) disimpen di FILE lewat main
+        // process (main.js -> smart-reply-state.json di userData), BUKAN
+        // localStorage. Di-cache in-memory di sini biar deteksi pola pas tiap
+        // keystroke tetep sinkron (gak nembak IPC tiap ngetik) — cache-nya
+        // di-load sekali pas boot, terus ditulis balik ke file tiap ada
+        // perubahan (fire-and-forget, main.js yang nge-debounce write-nya).
+        const hasBridge = !!(window.akhtarSmartReply && window.akhtarSmartReply.load);
+        let srState = { enabled: true, weights: {} };
+        let srReady = false;
+
+        function persistEnabled() { if (hasBridge) window.akhtarSmartReply.setEnabled(srState.enabled); }
+        function persistWeights() { if (hasBridge) window.akhtarSmartReply.setWeights(srState.weights); }
+
+        if (hasBridge) {
+            window.akhtarSmartReply.load().then(function (state) {
+                if (state && typeof state === 'object') {
+                    srState.enabled = typeof state.enabled === 'boolean' ? state.enabled : true;
+                    srState.weights = (state.weights && typeof state.weights === 'object') ? state.weights : {};
+                }
+                srReady = true;
+            }).catch(function () { srReady = true; });
+        } else {
+            // Gak ada bridge Electron (mis. dibuka langsung di browser biasa) ->
+            // tetep jalan, cuma weight-nya gak nembus reload (in-memory doang),
+            // TIDAK fallback ke localStorage.
+            srReady = true;
+        }
+
+        function isEnabled() { return srState.enabled; }
+        window.toggleSmartReply = function (el) {
+            el.classList.toggle('on');
+            srState.enabled = el.classList.contains('on');
+            persistEnabled();
+            if (!srState.enabled) hideBar();
+        };
+
+        // ---------- Weight belajar sederhana (naik kalau sering diklik, turun kalau engga) ----------
+        function weightKey(category, text) { return category + '::' + text; }
+        function bumpWeight(category, chosenText, shownTexts) {
+            shownTexts.forEach(function (text) {
+                const k = weightKey(category, text);
+                const cur = typeof srState.weights[k] === 'number' ? srState.weights[k] : 0;
+                if (text === chosenText) {
+                    srState.weights[k] = Math.min(50, cur + 1);
+                } else {
+                    srState.weights[k] = Math.max(-10, cur - 0.15);
+                }
+            });
+            persistWeights();
+        }
+        function topSuggestions(category) {
+            const pool = BANKS[category] || [];
+            const ranked = pool.map(function (text, idx) {
+                const k = weightKey(category, text);
+                return { text: text, score: (typeof srState.weights[k] === 'number' ? srState.weights[k] : 0), idx: idx };
+            }).sort(function (a, b) { return b.score - a.score || a.idx - b.idx; });
+            return ranked.slice(0, SR_MAX_CHIPS).map(function (r) { return r.text; });
+        }
+
+        // ---------- Deteksi pola kalimat (murni keyword, BUKAN AI) ----------
+        function lastSentence(text) {
+            const parts = String(text || '').split(/[\n.!?]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+            return parts.length ? parts[parts.length - 1] : '';
+        }
+        function detectCategory(rawText) {
+            const endsWithQuestion = /\?\s*$/.test(rawText || '');
+            const t = lastSentence(rawText).toLowerCase();
+            if (!t && !endsWithQuestion) return null;
+            if (/\b(halo|hai|hei|pagi|siang|sore|malam|woy|permisi)\b/.test(t)) return 'sapaan';
+            if (/\b(yuk|yu|mari|ayo|gas|cus)\b/.test(t)) return 'ajakan';
+            if (/\b(tolong|bantu|mohon|minta)\b/.test(t) || /\bbisa\s+(gak|ga|nggak|enggak|tolong)\b/.test(t)) return 'permintaan';
+            if (/\b(fyi|info|infoin|kabarin|update|beritahu|kasih ?tau)\b/.test(t)) return 'info';
+            if (endsWithQuestion || /\?/.test(t)) return 'tanya';
+            return null;
+        }
+
+        // ---------- UI: chip bar ngambang di atas input yang lagi difokus ----------
+        let activeInput = null;
+        let currentCategory = null;
+        let currentShown = [];
+        let hideTimer = null;
+
+        function isEligibleField(el) {
+            if (!el) return false;
+            const tag = (el.tagName || '').toLowerCase();
+            const isTextInput = tag === 'textarea' || (tag === 'input' && !['password', 'checkbox', 'radio', 'range', 'color', 'file', 'date', 'time', 'number'].includes((el.type || 'text').toLowerCase()));
+            const isEditable = el.isContentEditable === true;
+            if (!isTextInput && !isEditable) return false;
+            // Jangan pernah nyala di layar login/PIN — bukan tempatnya "balasan cepat".
+            if (el.closest && (el.closest('#login-screen') || el.closest('#pin-screen'))) return false;
+            return true;
+        }
+        function getFieldText(el) {
+            return el.isContentEditable ? (el.innerText || '') : (el.value || '');
+        }
+        function insertIntoField(el, text) {
+            if (el.isContentEditable) {
+                el.focus();
+                document.execCommand('insertText', false, (getFieldText(el) ? ' ' : '') + text);
+            } else {
+                const cur = el.value || '';
+                const start = el.selectionStart != null ? el.selectionStart : cur.length;
+                const end = el.selectionEnd != null ? el.selectionEnd : cur.length;
+                const sep = (start > 0 && cur[start - 1] && !/\s/.test(cur[start - 1])) ? ' ' : '';
+                const insert = sep + text;
+                el.value = cur.slice(0, start) + insert + cur.slice(end);
+                el.selectionStart = el.selectionEnd = start + insert.length;
+                el.focus();
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        function hideBar() {
+            const bar = document.getElementById('smartreply-bar');
+            if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+            currentCategory = null;
+            currentShown = [];
+            if (typeof window.unregisterLiveActivity === 'function') window.unregisterLiveActivity(SR_ACTIVITY_ID);
+        }
+
+        function positionBar(bar, el) {
+            const rect = el.getBoundingClientRect();
+            const barRect = bar.getBoundingClientRect();
+            let top = rect.top - barRect.height - 8;
+            if (top < 4) top = rect.bottom + 8; // kalau kepentok atas layar, taro di bawah input aja
+            let left = rect.left;
+            if (left + barRect.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - barRect.width - 8);
+            bar.style.top = top + 'px';
+            bar.style.left = left + 'px';
+        }
+
+        function showBar(el, category, suggestions) {
+            let bar = document.getElementById('smartreply-bar');
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'smartreply-bar';
+                document.body.appendChild(bar);
+            }
+            bar.innerHTML = suggestions.map(function (text) {
+                return '<div class="smartreply-chip" data-text="' + text.replace(/"/g, '&quot;') + '">' + text.replace(/</g, '&lt;') + '</div>';
+            }).join('');
+            Array.prototype.forEach.call(bar.querySelectorAll('.smartreply-chip'), function (chip) {
+                // mousedown (bukan click) biar keburu duluan sebelum blur ngilangin bar-nya.
+                chip.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    const text = chip.getAttribute('data-text');
+                    if (activeInput) insertIntoField(activeInput, text);
+                    bumpWeight(category, text, currentShown);
+                    hideBar();
+                });
+            });
+            positionBar(bar, el);
+
+            if (typeof window.registerLiveActivity === 'function') {
+                window.registerLiveActivity(SR_ACTIVITY_ID, {
+                    icon: '<i class="fa-solid fa-comment-dots"></i>',
+                    title: 'Balasan cepat ready',
+                    subtitle: CATEGORY_LABEL[category] || '',
+                    priority: 4, autoCompactMs: 2000, ttlMs: 8000,
+                    onTap: function () { if (activeInput) activeInput.focus(); }
+                });
+            }
+        }
+
+        function handleFieldChange(el) {
+            if (!srReady || !isEnabled() || !isEligibleField(el)) { hideBar(); return; }
+            const text = getFieldText(el);
+            const category = detectCategory(text);
+            if (!category) { hideBar(); return; }
+            activeInput = el;
+            currentCategory = category;
+            currentShown = topSuggestions(category);
+            if (!currentShown.length) { hideBar(); return; }
+            showBar(el, category, currentShown);
+        }
+
+        let debounceTimer = null;
+        document.addEventListener('input', function (e) {
+            if (!isEligibleField(e.target)) return;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () { handleFieldChange(e.target); }, 220);
+        }, true);
+
+        document.addEventListener('focusin', function (e) {
+            if (isEligibleField(e.target) && getFieldText(e.target)) handleFieldChange(e.target);
+        }, true);
+
+        document.addEventListener('focusout', function (e) {
+            if (e.target === activeInput) {
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(hideBar, 150); // delay dikit biar mousedown chip sempet kepencet
+            }
+        }, true);
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && document.getElementById('smartreply-bar')) hideBar();
+        });
+
+        window.addEventListener('resize', function () {
+            const bar = document.getElementById('smartreply-bar');
+            if (bar && activeInput) positionBar(bar, activeInput);
+        });
+
+        // ---------- Sync visual toggle Settings ke state asli dari file (murah,
+        // 1 DOM lookup/detik) — perlu karena togglenya di-load ASYNC dari main
+        // process, jadi HTML statisnya gak bisa langsung nebak nilai awalnya. ----------
+        setInterval(function () {
+            if (!srReady) return;
+            const t = document.getElementById('smartreply-toggle');
+            if (t) t.classList.toggle('on', srState.enabled);
+        }, 1000);
+    })();
+    </script>
+
+    <!-- ================================================================
+         AUTO-THEME FROM WALLPAPER
+         BUKAN AI vision — k-means clustering klasik (algoritma taun 1957):
+         sample 64 pixel acak dari wallpaper -> cluster jadi 5 warna dominan
+         (10 iterasi) -> klasifikasi tiap cluster jadi peran warna (aksen =
+         paling vibrant, tint = paling netral, highlight = paling terang,
+         border = paling gelap, teks = dihitung dari contrast ratio). State
+         on/off disimpen lewat main.js (file), bukan localStorage.
+    ================================================================= -->
+    <style>
+        #at-modal-overlay { position: fixed; inset: 0; z-index: 999998; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+        #at-modal-card { background: #1c1c1e; color: #f4f4f5; border-radius: 16px; padding: 22px 24px; width: 340px; max-width: calc(100vw - 32px); box-shadow: 0 24px 70px rgba(0,0,0,.5); }
+        .at-swatch-row { display: flex; gap: 8px; margin: 14px 0; }
+        .at-swatch { flex: 1; text-align: center; }
+        .at-swatch .box { width: 100%; aspect-ratio: 1; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); }
+        .at-swatch .lbl { font-size: 9px; color: #a1a1aa; margin-top: 4px; text-transform: uppercase; letter-spacing: .03em; }
+        .at-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,.15); border-top-color: #22d3ee; animation: atSpin .7s linear infinite; margin: 0 auto 14px; }
+        @keyframes atSpin { to { transform: rotate(360deg); } }
+        #auto-theme-tint { position: fixed; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: overlay; opacity: .5; transition: background 0.6s ease; }
+    </style>
+    <script>
+    (function initAutoThemeFromWallpaper() {
+        'use strict';
+        const hasBridge = !!(window.akhtarAutoTheme && window.akhtarAutoTheme.load);
+        let atState = { enabled: false };
+        let atReady = false;
+
+        if (hasBridge) {
+            window.akhtarAutoTheme.load().then(function (state) {
+                if (state && typeof state === 'object') atState.enabled = !!state.enabled;
+                atReady = true;
+            }).catch(function () { atReady = true; });
+        } else {
+            atReady = true; // gak ada bridge Electron -> jalan in-memory, gak fallback localStorage
+        }
+
+        window.toggleAutoThemeFromWallpaper = function (el) {
+            el.classList.toggle('on');
+            atState.enabled = el.classList.contains('on');
+            if (hasBridge) window.akhtarAutoTheme.setEnabled(atState.enabled);
+        };
+        setInterval(function () {
+            if (!atReady) return;
+            const t = document.getElementById('auto-theme-toggle');
+            if (t) t.classList.toggle('on', atState.enabled);
+        }, 1000);
+
+        // ---------- Konversi ruang warna: sRGB <-> CIELAB ----------
+        // K-means di RGB mentah suka salah kumpul (jarak Euclidean RGB gak
+        // sesuai persepsi mata manusia). Lab dirancang persis buat itu — jarak
+        // di Lab kira-kira sebanding sama beda warna yang KELIHATAN. Jadi
+        // clustering-nya sekarang jalan di Lab, baru dikonversi balik ke RGB
+        // buat ditampilkan/dipakai di CSS.
+        function srgbToLinear(c) {
+            c = c / 255;
+            return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        }
+        function linearToSrgb(c) {
+            const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+            return Math.round(Math.max(0, Math.min(255, v * 255)));
+        }
+        function rgbToXyz(rgb) {
+            const r = srgbToLinear(rgb[0]), g = srgbToLinear(rgb[1]), b = srgbToLinear(rgb[2]);
+            return [
+                r * 0.4124564 + g * 0.3575761 + b * 0.1804375,
+                r * 0.2126729 + g * 0.7151522 + b * 0.0721750,
+                r * 0.0193339 + g * 0.1191920 + b * 0.9503041
+            ];
+        }
+        function xyzToRgb(xyz) {
+            const x = xyz[0], y = xyz[1], z = xyz[2];
+            const r = x * 3.2404542 + y * -1.5371385 + z * -0.4985314;
+            const g = x * -0.9692660 + y * 1.8760108 + z * 0.0415560;
+            const b = x * 0.0556434 + y * -0.2040259 + z * 1.0572252;
+            return [linearToSrgb(r), linearToSrgb(g), linearToSrgb(b)];
+        }
+        // D65 white point
+        const LAB_XN = 0.95047, LAB_YN = 1.0, LAB_ZN = 1.08883;
+        function labF(t) { return t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116); }
+        function labFInv(t) { const t3 = t * t * t; return t3 > 0.008856 ? t3 : (t - 16 / 116) / 7.787; }
+        function xyzToLab(xyz) {
+            const fx = labF(xyz[0] / LAB_XN), fy = labF(xyz[1] / LAB_YN), fz = labF(xyz[2] / LAB_ZN);
+            return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+        }
+        function labToXyz(lab) {
+            const fy = (lab[0] + 16) / 116, fx = fy + lab[1] / 500, fz = fy - lab[2] / 200;
+            return [labFInv(fx) * LAB_XN, labFInv(fy) * LAB_YN, labFInv(fz) * LAB_ZN];
+        }
+        function rgbToLab(rgb) { return xyzToLab(rgbToXyz(rgb)); }
+        function labToRgb(lab) {
+            const xyz = labToXyz(lab);
+            return xyzToRgb(xyz).map(function (v) { return Math.max(0, Math.min(255, v)); });
+        }
+
+        // ---------- K-means++ init: pilih centroid awal proporsional ke jarak
+        // kuadrat ke centroid terdekat yang udah kepilih, biar sebaran centroid
+        // awal representatif (bukan asal nebak random polos yang gampang
+        // ke-cluster numpuk di satu area). ----------
+        function kmeansPlusPlusInit(points, k) {
+            const centroids = [];
+            centroids.push(points[Math.floor(Math.random() * points.length)].slice());
+            while (centroids.length < k) {
+                const distSq = points.map(function (p) {
+                    let best = Infinity;
+                    centroids.forEach(function (c) {
+                        const d = (p[0] - c[0]) * (p[0] - c[0]) + (p[1] - c[1]) * (p[1] - c[1]) + (p[2] - c[2]) * (p[2] - c[2]);
+                        if (d < best) best = d;
+                    });
+                    return best;
+                });
+                const total = distSq.reduce(function (a, b) { return a + b; }, 0);
+                if (total <= 0) {
+                    centroids.push(points[Math.floor(Math.random() * points.length)].slice());
+                    continue;
+                }
+                let r = Math.random() * total;
+                let idx = 0;
+                for (; idx < distSq.length; idx++) {
+                    r -= distSq[idx];
+                    if (r <= 0) break;
+                }
+                centroids.push(points[Math.min(idx, points.length - 1)].slice());
+            }
+            return centroids;
+        }
+
+        // ---------- K-means di ruang Lab, dengan early-stop konvergensi +
+        // reseed cluster kosong ke titik terjauh dari semua centroid (bukan
+        // asal random) supaya gak ada cluster yang collapse jadi duplikat. ----------
+        function kmeansLab(points, k, maxIterations) {
+            let centroids = kmeansPlusPlusInit(points, k);
+            let assignments = new Array(points.length).fill(0);
+            for (let iter = 0; iter < maxIterations; iter++) {
+                const buckets = centroids.map(function () { return []; });
+                points.forEach(function (p, pi) {
+                    let bestI = 0, bestD = Infinity;
+                    centroids.forEach(function (c, ci) {
+                        const d = (p[0] - c[0]) * (p[0] - c[0]) + (p[1] - c[1]) * (p[1] - c[1]) + (p[2] - c[2]) * (p[2] - c[2]);
+                        if (d < bestD) { bestD = d; bestI = ci; }
+                    });
+                    assignments[pi] = bestI;
+                    buckets[bestI].push(p);
+                });
+
+                const newCentroids = centroids.map(function (c, ci) {
+                    const b = buckets[ci];
+                    if (!b.length) {
+                        // Cluster kosong: reseed ke titik yang PALING JAUH dari
+                        // semua centroid saat ini, bukan titik random — biar
+                        // cluster itu langsung mewakili area warna yang belum
+                        // ke-cover, bukan malah nyaris duplikat cluster lain.
+                        let farI = 0, farD = -Infinity;
+                        points.forEach(function (p, pi) {
+                            let d = Infinity;
+                            centroids.forEach(function (cc) {
+                                const dd = (p[0] - cc[0]) * (p[0] - cc[0]) + (p[1] - cc[1]) * (p[1] - cc[1]) + (p[2] - cc[2]) * (p[2] - cc[2]);
+                                if (dd < d) d = dd;
+                            });
+                            if (d > farD) { farD = d; farI = pi; }
+                        });
+                        return points[farI].slice();
+                    }
+                    const sum = b.reduce(function (acc, p) { return [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]]; }, [0, 0, 0]);
+                    return [sum[0] / b.length, sum[1] / b.length, sum[2] / b.length];
+                });
+
+                // Early-stop: kalau semua centroid udah nyaris gak gerak lagi
+                // (pergeseran maksimum < 0.5 dalam satuan Lab), berhenti lebih
+                // cepat daripada maksa iterasi penuh — hemat kerja & hasil sama.
+                let maxShift = 0;
+                for (let ci = 0; ci < centroids.length; ci++) {
+                    const dx = newCentroids[ci][0] - centroids[ci][0];
+                    const dy = newCentroids[ci][1] - centroids[ci][1];
+                    const dz = newCentroids[ci][2] - centroids[ci][2];
+                    const shift = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    if (shift > maxShift) maxShift = shift;
+                }
+                centroids = newCentroids;
+                if (maxShift < 0.5) break;
+            }
+
+            const counts = centroids.map(function () { return 0; });
+            assignments.forEach(function (ci) { counts[ci]++; });
+            return centroids.map(function (c, ci) { return { lab: c, count: counts[ci] }; });
+        }
+
+        // ---------- Util warna ----------
+        function rgbToHex(rgb) {
+            return '#' + rgb.map(function (v) { return Math.round(v).toString(16).padStart(2, '0'); }).join('');
+        }
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0; const l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                else if (max === g) h = (b - r) / d + 2;
+                else h = (r - g) / d + 4;
+                h /= 6;
+            }
+            return { h: h, s: s, l: l };
+        }
+        function relLuminance(rgb) {
+            const chan = rgb.map(function (v) {
+                const c = v / 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
+        }
+        function contrastRatio(rgb1, rgb2) {
+            const l1 = relLuminance(rgb1) + 0.05, l2 = relLuminance(rgb2) + 0.05;
+            return l1 > l2 ? l1 / l2 : l2 / l1;
+        }
+
+        // ---------- Sample 64 pixel dari gambar/frame video, pakai stratified
+        // grid 8x8 (satu pixel random per sel grid) bukan random polos — biar
+        // sample-nya kejamin nyebar ke seluruh gambar, gak ada area yang
+        // kebetulan gak kesample sama sekali cuma gara-gara nasib RNG. ----------
+        function samplePixelsFromElement(el, w, h) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 96; canvas.height = 96;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            const points = [];
+            const gridN = 8; // 8x8 = 64 sample
+            const cellW = canvas.width / gridN, cellH = canvas.height / gridN;
+            for (let gy = 0; gy < gridN; gy++) {
+                for (let gx = 0; gx < gridN; gx++) {
+                    const x = Math.min(canvas.width - 1, Math.floor(gx * cellW + Math.random() * cellW));
+                    const y = Math.min(canvas.height - 1, Math.floor(gy * cellH + Math.random() * cellH));
+                    const idx = (y * canvas.width + x) * 4;
+                    points.push([data[idx], data[idx + 1], data[idx + 2]]);
+                }
+            }
+            return points;
+        }
+
+        function extractPaletteFromPoints(points) {
+            const labPoints = points.map(rgbToLab);
+            const clusters = kmeansLab(labPoints, 5, 10);
+            const withInfo = clusters.map(function (c) {
+                const rgb = labToRgb(c.lab);
+                const hsl = rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                // Bobot populasi: cluster yang cuma nangkep 1-2 pixel outlier
+                // gampang punya saturasi/lightness ekstrem tapi gak representatif
+                // buat wallpaper-nya. sqrt(count) meredam itu tanpa bikin
+                // cluster besar mendominasi total.
+                return { rgb: rgb, hsl: hsl, weight: Math.sqrt(Math.max(1, c.count)) };
+            });
+
+            // Assignment bijektif: tiap role dapat CLUSTER BERBEDA, dipilih
+            // greedy dari skor tertinggi dulu, biar gak ada dua role kebetulan
+            // kebagian warna yang sama persis (misal aksen == border).
+            const used = new Array(withInfo.length).fill(false);
+            function pickBest(scoreFn) {
+                let bestI = -1, bestScore = -Infinity;
+                withInfo.forEach(function (c, i) {
+                    if (used[i]) return;
+                    const score = scoreFn(c) * c.weight;
+                    if (score > bestScore) { bestScore = score; bestI = i; }
+                });
+                if (bestI === -1) { // fallback kalau semua kepake (k kecil dari sample)
+                    withInfo.forEach(function (c, i) { if (bestI === -1) bestI = i; });
+                }
+                used[bestI] = true;
+                return withInfo[bestI];
+            }
+
+            const vibrant = pickBest(function (c) { return c.hsl.s; });
+            const highlight = pickBest(function (c) { return c.hsl.l; });
+            const border = pickBest(function (c) { return 1 - c.hsl.l; });
+            const neutral = pickBest(function (c) { return 1 - c.hsl.s; });
+            // Cluster ke-5 sengaja gak dipetakan ke role manapun — cukup 4
+            // warna utama yang perlu unik; sample ekstra itu tetap berguna
+            // buat nyetabilin rata-rata k-means-nya.
+
+            const white = [255, 255, 255], black = [17, 17, 17];
+            const text = contrastRatio(white, neutral.rgb) >= contrastRatio(black, neutral.rgb) ? white : black;
+            // Tombol "Terapkan Tema Ini" background-nya = accent, jadi warna
+            // teksnya dihitung kontras terhadap ACCENT, bukan terhadap tint
+            // (role `text` di atas) — biar tetep kebaca di kondisi apapun.
+            const buttonText = contrastRatio(white, vibrant.rgb) >= contrastRatio(black, vibrant.rgb) ? white : black;
+            return {
+                accent: rgbToHex(vibrant.rgb),
+                tint: rgbToHex(neutral.rgb),
+                highlight: rgbToHex(highlight.rgb),
+                border: rgbToHex(border.rgb),
+                text: rgbToHex(text),
+                buttonText: rgbToHex(buttonText)
+            };
+        }
+
+        // ---------- Apply: cuma layer aditif & aman (gak nimpa seluruh warna
+        // teks OS yang udah ada di 30rb baris kode ini — resikonya kebesaran
+        // kalau salah kontras di sebagian app). Yang kena: aksen (via setAccent
+        // yang emang udah ada), tint overlay non-destruktif di atas wallpaper,
+        // dan strip highlight tipis di taskbar. ----------
+        function applyPalette(pal) {
+            if (typeof setAccent === 'function') setAccent(pal.accent);
+            let tint = document.getElementById('auto-theme-tint');
+            if (!tint) {
+                tint = document.createElement('div');
+                tint.id = 'auto-theme-tint';
+                document.body.appendChild(tint);
+            }
+            tint.style.background = 'linear-gradient(160deg, ' + pal.tint + '33, ' + pal.border + '22)';
+            const taskbar = document.getElementById('taskbar');
+            if (taskbar) taskbar.style.borderTop = '2px solid ' + pal.highlight;
+        }
+        function clearPalette() {
+            const tint = document.getElementById('auto-theme-tint');
+            if (tint && tint.parentNode) tint.parentNode.removeChild(tint);
+            const taskbar = document.getElementById('taskbar');
+            if (taskbar) taskbar.style.borderTop = '';
+        }
+
+        // ---------- Modal: loading "Analyzing..." 800ms (bonus fake-AI theatrics
+        // yang emang diminta) -> preview 5 swatch -> klik buat apply ----------
+        function closeModal() {
+            const el = document.getElementById('at-modal-overlay');
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        }
+        function showAnalyzing() {
+            closeModal();
+            const overlay = document.createElement('div');
+            overlay.id = 'at-modal-overlay';
+            overlay.innerHTML = '<div id="at-modal-card" style="text-align:center;">' +
+                '<div class="at-spinner"></div>' +
+                '<div style="font-weight:700;font-size:14px;">Analyzing wallpaper...</div>' +
+                '<div style="font-size:11px;color:#a1a1aa;margin-top:4px;">Ekstrak warna dominan (k-means, 5 cluster)</div>' +
+                '</div>';
+            document.body.appendChild(overlay);
+        }
+        function showPreview(pal) {
+            closeModal();
+            const overlay = document.createElement('div');
+            overlay.id = 'at-modal-overlay';
+            const roles = [
+                { key: 'accent', lbl: 'Aksen' }, { key: 'tint', lbl: 'Tint' }, { key: 'text', lbl: 'Teks' },
+                { key: 'highlight', lbl: 'Highlight' }, { key: 'border', lbl: 'Border' }
+            ];
+            const swatches = roles.map(function (r) {
+                return '<div class="at-swatch"><div class="box" style="background:' + pal[r.key] + ';"></div><div class="lbl">' + r.lbl + '</div></div>';
+            }).join('');
+            overlay.innerHTML = '<div id="at-modal-card">' +
+                '<div style="font-weight:700;font-size:15px;">Tema baru dari wallpaper kamu</div>' +
+                '<div style="font-size:11px;color:#a1a1aa;margin-top:2px;">5 warna dominan hasil k-means clustering — klik Terapkan buat pakai, atau lewati aja.</div>' +
+                '<div class="at-swatch-row">' + swatches + '</div>' +
+                '<div style="display:flex;gap:8px;">' +
+                '<button id="at-apply-btn" style="flex:1;background:' + pal.accent + ';color:' + pal.buttonText + ';border:none;padding:10px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">Terapkan Tema Ini</button>' +
+                '<button id="at-skip-btn" style="background:rgba(255,255,255,.08);color:#e4e4e7;border:none;padding:10px 14px;border-radius:8px;font-size:13px;cursor:pointer;">Lewati</button>' +
+                '</div></div>';
+            document.body.appendChild(overlay);
+            document.getElementById('at-apply-btn').onclick = function () {
+                applyPalette(pal);
+                if (typeof addOsNotification === 'function') addOsNotification('', 'Auto-Theme', 'Tema baru dari wallpaper diterapkan!');
+                closeModal();
+            };
+            document.getElementById('at-skip-btn').onclick = closeModal;
+        }
+
+        function runAutoTheme(mediaEl) {
+            showAnalyzing();
+            setTimeout(function () {
+                try {
+                    const points = samplePixelsFromElement(mediaEl);
+                    const pal = extractPaletteFromPoints(points);
+                    showPreview(pal);
+                } catch (e) {
+                    closeModal();
+                }
+            }, 800); // delay sengaja — analisis k-means-nya sendiri cuma ~5ms
+        }
+
+        window.__autoThemeOnWallpaperChange = function (file, type) {
+            if (!atReady || !atState.enabled || !file) return;
+            const url = URL.createObjectURL(file);
+            if (type === 'video') {
+                const vid = document.createElement('video');
+                vid.muted = true; vid.src = url;
+                vid.addEventListener('loadeddata', function () {
+                    try { vid.currentTime = Math.min(1, (vid.duration || 1) / 3); } catch (e) {}
+                });
+                vid.addEventListener('seeked', function () {
+                    runAutoTheme(vid);
+                    URL.revokeObjectURL(url);
+                }, { once: true });
+                vid.addEventListener('error', function () { URL.revokeObjectURL(url); });
+            } else {
+                const img = new Image();
+                img.onload = function () {
+                    runAutoTheme(img);
+                    URL.revokeObjectURL(url);
+                };
+                img.onerror = function () { URL.revokeObjectURL(url); };
+                img.src = url;
+            }
+        };
+
+        // Kalau fiturnya dimatiin, bersihin layer tint/highlight yang mungkin
+        // masih nempel dari sesi sebelumnya (aksen warna gak ikut di-revert,
+        // sama kayak Mood-Driven UI — itu pilihan personal, bukan status sistem).
+        const offCheckInterval = setInterval(function () {
+            if (!atReady) return;
+            if (!atState.enabled && document.getElementById('auto-theme-tint')) clearPalette();
+        }, 2000);
     })();
     </script>
 
@@ -30884,7 +32467,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }
 
         function poisonLabelFor(type) {
-            if (type === 'google-search') return { badge: 'google', text: 'Google Search' };
+            if (type === 'google-search') return { badge: 'google', text: 'DuckDuckGo Search' };
             if (type === 'youtube-search') return { badge: 'youtube', text: 'YouTube Search' };
             if (type === 'ecommerce-search') return { badge: 'ecommerce', text: 'E-commerce' };
             if (type === 'news-browse') return { badge: 'news', text: 'Baca Berita' };
@@ -31092,7 +32675,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }
 
         function sbLabelFor(type) {
-            if (type === 'google-search') return { badge: 'google', text: 'Google Search' };
+            if (type === 'google-search') return { badge: 'google', text: 'DuckDuckGo Search' };
             if (type === 'youtube-search') return { badge: 'youtube', text: 'YouTube Search' };
             if (type === 'ecommerce-search') return { badge: 'ecommerce', text: 'E-commerce' };
             if (type === 'news-browse') return { badge: 'news', text: 'Baca Berita' };
