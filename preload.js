@@ -177,6 +177,34 @@ contextBridge.exposeInMainWorld('akhtarBrowser', {
   }
 });
 
+// ==================================
+// INSTANT SCREENSHOT + OCR
+// ==================================
+contextBridge.exposeInMainWorld('akhtarScreenshot', {
+    // Nangkep seluruh window Akhtar OS apa adanya, dikembalikan sebagai
+    // data URL PNG. Cropping (area/window aktif) dikerjain di renderer.
+    captureWindow: () => ipcRenderer.invoke('screenshot-capture-window')
+});
+
+// ==================================
+// SMART REPLY — state (enabled + weight belajar) disimpen di file lewat
+// main process, bukan localStorage.
+// ==================================
+contextBridge.exposeInMainWorld('akhtarSmartReply', {
+    load: () => ipcRenderer.invoke('smart-reply-load'),
+    setEnabled: (enabled) => ipcRenderer.invoke('smart-reply-set-enabled', enabled),
+    setWeights: (weights) => ipcRenderer.invoke('smart-reply-set-weights', weights)
+});
+
+// ==================================
+// AUTO-THEME FROM WALLPAPER — cuma flag on/off, disimpen di file (bukan
+// localStorage). Ekstraksi warna (k-means) jalan di renderer.
+// ==================================
+contextBridge.exposeInMainWorld('akhtarAutoTheme', {
+    load: () => ipcRenderer.invoke('auto-theme-load'),
+    setEnabled: (enabled) => ipcRenderer.invoke('auto-theme-set-enabled', enabled)
+});
+
 
 // ==================================
 // STAGE 2 — REAL FILE SYSTEM API
