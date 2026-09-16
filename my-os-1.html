@@ -8,7 +8,7 @@
         default-src 'self';
         script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
         style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.tailwindcss.com https://cdn.jsdelivr.net;
-        font-src 'self' https://cdnjs.cloudflare.com data:;
+        font-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data:;
         img-src 'self' data: blob: https:;
         media-src 'self' data: blob:;
         connect-src 'self' https: wss: blob: data:;
@@ -19,6 +19,11 @@
         form-action 'self';
     ">
     <title>Akhtar OS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5/300.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5/400.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5/500.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5/600.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/plus-jakarta-sans@5/700.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
@@ -262,7 +267,7 @@
         #desktop {
             display: none;
             width: 100vw; height: 100vh;
-            background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover;
+            background: #141A2E;
             position: relative; overflow: hidden;
         }
 
@@ -1152,358 +1157,527 @@
 
     </style>
 
-    <!-- ===== visionOS + macOS glass theme (Akhtar OS) ===== -->
+    <!-- ===== Tema sistem Akhtar OS 3 ===== -->
     <style id="vos-theme">
+        /* =====================================================
+           AKHTAR OS 3 — bahasa desain sistem
+           Shell (taskbar, start, flyout): material gelap.
+           Window: permukaan terang, rapat, konsisten.
+           Aksen: --ak-accent (bisa diganti dari Settings).
+           Logo: bunga kawung empat kelopak, warna kunyit.
+           ===================================================== */
         :root {
-            --vos-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
-            --vos-blur: blur(38px) saturate(180%);
-            --vos-blur-soft: blur(24px) saturate(160%);
-            --vos-light: rgba(255,255,255,0.62);
-            --vos-light-2: rgba(255,255,255,0.42);
-            --vos-dark: rgba(22,24,30,0.55);
-            --vos-dark-2: rgba(22,24,30,0.38);
-            --vos-hairline: rgba(255,255,255,0.35);
-            --vos-hairline-dark: rgba(255,255,255,0.12);
-            --vos-shadow: 0 24px 70px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.12);
-            --vos-shadow-soft: 0 10px 40px rgba(0,0,0,0.22);
-            --vos-radius: 22px;
-            --vos-radius-sm: 14px;
-            --vos-accent: #0a84ff;
+            --ak-wallpaper: url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 1920 1080%22 preserveAspectRatio=%22xMidYMid slice%22%3E%3Cdefs%3E%3ClinearGradient id=%22sky%22 x1=%220%22 y1=%220%22 x2=%220%22 y2=%221%22%3E%3Cstop offset=%220%22 stop-color=%22%23101629%22/%3E%3Cstop offset=%22.45%22 stop-color=%22%2326335E%22/%3E%3Cstop offset=%22.72%22 stop-color=%22%236A5A7A%22/%3E%3Cstop offset=%22.86%22 stop-color=%22%23D49A5B%22/%3E%3Cstop offset=%221%22 stop-color=%22%23E9B872%22/%3E%3C/linearGradient%3E%3CradialGradient id=%22sun%22 cx=%221260%22 cy=%22820%22 r=%22520%22 gradientUnits=%22userSpaceOnUse%22%3E%3Cstop offset=%220%22 stop-color=%22%23F6CB7E%22 stop-opacity=%22.75%22/%3E%3Cstop offset=%221%22 stop-color=%22%23F6CB7E%22 stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width=%221920%22 height=%221080%22 fill=%22url%28%23sky%29%22/%3E%3Crect width=%221920%22 height=%221080%22 fill=%22url%28%23sun%29%22/%3E%3Cpath d=%22M0 760 C220 700 380 690 560 730 S900 800 1080 740 1420 640 1640 690 1860 760 1920 740 V1080 H0Z%22 fill=%22%233B3F66%22/%3E%3Cpath d=%22M0 840 C260 790 420 810 640 850 S1000 900 1240 830 1600 760 1920 820 V1080 H0Z%22 fill=%22%232A2E52%22/%3E%3Cpath d=%22M0 930 C300 880 520 900 760 940 S1180 990 1440 920 1760 880 1920 910 V1080 H0Z%22 fill=%22%231C2040%22/%3E%3Cpath d=%22M0 1010 C380 970 640 990 980 1020 S1560 1040 1920 1000 V1080 H0Z%22 fill=%22%2312152B%22/%3E%3C/svg%3E");
+            --ak-font: "Plus Jakarta Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 
-            /* ================================
-               STAGE 5 — MOTION TOKENS
-               Kurva "quick-decel" ala One UI/iOS:
-               cepat berangkat, ngerem halus di ujung.
-               Semua transisi window/desktop pakai token
-               ini biar konsisten & gampang di-tune.
-               ================================ */
-            --vos-ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
-            --vos-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
-            --vos-dur-fast: 0.16s;
-            --vos-dur-base: 0.2s;
-            --vos-dur-slow: 0.32s;
+            --ak-accent: #3657D6;
+            --ak-accent-hover: #2C4BC2;
+            --ak-brand: #E2A72A;
+
+            --ak-shell: rgba(30, 32, 39, 0.88);
+            --ak-shell-solid: #1E2027;
+            --ak-shell-raised: rgba(255,255,255,0.06);
+            --ak-shell-hover: rgba(255,255,255,0.09);
+            --ak-shell-press: rgba(255,255,255,0.05);
+            --ak-shell-line: rgba(255,255,255,0.08);
+            --ak-shell-text: #F1F2F4;
+            --ak-shell-text-2: #A6ABB5;
+            --ak-material: blur(30px) saturate(140%);
+
+            --ak-surface: #FFFFFF;
+            --ak-surface-2: #F4F5F7;
+            --ak-surface-3: #EBEDF0;
+            --ak-line: rgba(15, 20, 35, 0.12);
+            --ak-text: #1A1C21;
+            --ak-text-2: #5E636E;
+            --ak-danger: #C42B1C;
+
+            --ak-r-window: 10px;
+            --ak-r-flyout: 12px;
+            --ak-r-control: 6px;
+
+            --ak-shadow-window: 0 0 0 1px rgba(0,0,0,0.08), 0 8px 20px rgba(0,0,0,0.14), 0 28px 70px rgba(0,0,0,0.20);
+            --ak-shadow-flyout: 0 0 0 1px rgba(0,0,0,0.35), 0 16px 48px rgba(0,0,0,0.40);
+
+            /* nama lama, masih dipakai di tempat lain */
+            --vos-font: var(--ak-font);
+            --vos-accent: var(--ak-accent);
+            --vos-radius: var(--ak-r-window);
+            --vos-radius-sm: var(--ak-r-control);
+            --vos-blur: var(--ak-material);
+            --vos-blur-soft: var(--ak-material);
+            --vos-dark: var(--ak-shell);
+            --vos-dark-2: var(--ak-shell);
+            --vos-light: var(--ak-surface-2);
+            --vos-light-2: var(--ak-surface);
+            --vos-hairline: var(--ak-line);
+            --vos-hairline-dark: var(--ak-shell-line);
+            --vos-shadow: var(--ak-shadow-window);
+            --vos-shadow-soft: var(--ak-shadow-flyout);
+            --vos-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+            --vos-ease-emphasized: cubic-bezier(0.05, 0.7, 0.1, 1);
+            --vos-dur-fast: 0.1s;
+            --vos-dur-base: 0.18s;
+            --vos-dur-slow: 0.28s;
         }
-
-        /* Hormati preferensi sistem "kurangi animasi" (aksesibilitas +
-           juga otomatis lebih hemat baterai buat yang minta). */
         @media (prefers-reduced-motion: reduce) {
-            :root {
-                --vos-dur-fast: 0.001s;
-                --vos-dur-base: 0.001s;
-                --vos-dur-slow: 0.001s;
-            }
+            :root { --vos-dur-fast: 0.001s; --vos-dur-base: 0.001s; --vos-dur-slow: 0.001s; }
         }
-
-        /* Idle mode: dipasang lewat JS (osIdleWatcher) saat OS
-           gak disentuh sekian detik. Transisi window/desktop TETAP
-           kepake (biar gak berasa "patah" pas balik aktif), tapi
-           loop dekoratif yang gak esensial di-freeze lewat JS
-           (lihat pauseDecorativeLoops / resumeDecorativeLoops). */
-        body.os-idle .window:not(.open):not(.closing) {
-            transition-duration: 0.001s;
-        }
+        body.os-idle .window:not(.open):not(.closing) { transition-duration: 0.001s; }
 
         body, .window, .window-content, .native-app, .title-bar,
-        #start-menu, #widget-panel, #login-screen, #mobile-home, .context-menu {
-            font-family: var(--vos-font) !important;
+        #start-menu, #widget-panel, #login-screen, #boot-screen, #mobile-home, .context-menu, #taskbar {
+            font-family: var(--ak-font) !important;
             -webkit-font-smoothing: antialiased;
         }
+        #clock-time, #clock-date, #tb-ram-text, #tb-battery-pct, #ak-lock-clock { font-variant-numeric: tabular-nums; }
+        :focus-visible { outline: 2px solid var(--ak-accent) !important; outline-offset: 2px; }
+        ::selection { background: color-mix(in srgb, var(--ak-accent) 30%, transparent); }
 
-        /* ---------- Desktop backdrop ---------- */
-        #desktop::before {
-            content: '';
-            position: absolute; inset: 0;
+        /* ---------- Logo ---------- */
+        .ak-logo { display: block; }
+        .ak-logo .petal { fill: var(--ak-brand); }
+        .ak-logo .core { fill: var(--ak-shell-solid); }
+
+        /* ---------- Tile ikon aplikasi (dipakai desktop, start, taskbar) ---------- */
+        .ak-tile {
+            --s: 48px;
+            width: var(--s); height: var(--s);
+            flex-shrink: 0;
+            display: grid; place-items: center;
+            border-radius: calc(var(--s) * 0.26);
+            background-color: currentColor;
+            background-image: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.22));
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.25);
+            color: #6B7280;
+        }
+        .ak-tile i {
+            color: #fff !important;
+            font-size: calc(var(--s) * 0.44) !important;
+            margin: 0 !important;
+            filter: none !important;
             pointer-events: none;
-            z-index: 1;
-            background:
-                radial-gradient(60% 50% at 18% 12%, rgba(120,170,255,0.28), transparent 70%),
-                radial-gradient(50% 45% at 85% 20%, rgba(255,170,220,0.20), transparent 70%),
-                radial-gradient(70% 60% at 50% 105%, rgba(10,20,40,0.55), transparent 70%);
         }
+        .ak-tile.text-white, .ak-tile.text-gray-100, .ak-tile.text-gray-200, .ak-tile.text-yellow-100 { background-color: #6B7280; }
+        .ak-tile-sm { --s: 26px; }
+        .ak-tile-md { --s: 40px; }
 
-        /* ---------- Universal glass helpers ---------- */
-        .glass {
-            background: var(--vos-light) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline) !important;
-            box-shadow: var(--vos-shadow-soft) !important;
-            border-radius: var(--vos-radius-sm);
+        /* ---------- Boot ---------- */
+        #boot-screen { background: #0F1117 !important; }
+        #boot-particles, .boot-logo-text, .boot-tagline, .boot-status-text, .boot-version { display: none !important; }
+        #boot-logo-wrap { gap: 0 !important; }
+        #ak-boot-mark { width: 88px; height: 88px; }
+        .boot-progress-wrap {
+            width: 148px !important; height: 4px !important;
+            margin-top: 44px !important;
+            border-radius: 2px !important;
+            background: rgba(255,255,255,0.14) !important;
         }
-        .glass-dark {
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            color: #fff;
-        }
+        .boot-progress-bar { background: #fff !important; box-shadow: none !important; border-radius: 2px !important; }
 
-        /* ---------- Windows ---------- */
+        /* ---------- Layar kunci / login ---------- */
+        #login-screen {
+            justify-content: flex-end !important;
+            padding-bottom: 8vh;
+            background-color: #141A2E !important;
+            background-image: var(--ak-wallpaper) !important;
+            background-size: cover !important;
+            background-position: center !important;
+        }
+        #login-screen::before {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: rgba(8, 10, 18, 0.45);
+            backdrop-filter: blur(22px);
+        }
+        #login-screen > * { position: relative; }
+        #ak-lock-clock {
+            position: absolute !important;
+            top: 9vh; left: 0; right: 0;
+            text-align: center; color: #fff;
+            text-shadow: 0 1px 12px rgba(0,0,0,0.25);
+        }
+        #ak-lock-clock .t { font-size: clamp(64px, 9vw, 104px); font-weight: 300; letter-spacing: -0.03em; line-height: 1; }
+        #ak-lock-clock .d { font-size: 18px; font-weight: 500; margin-top: 10px; opacity: 0.9; }
+
+        .login-card {
+            width: 340px !important;
+            padding: 0 !important;
+            background: transparent !important;
+            backdrop-filter: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #fff !important;
+            text-align: center !important;
+        }
+        .login-card h2 { color: #fff !important; font-size: 22px !important; font-weight: 600 !important; margin-bottom: 14px !important; }
+        #login-view > p:first-of-type { display: none; }
+        .login-card p, .login-card .login-hint { color: rgba(255,255,255,0.72) !important; }
+        .login-avatar {
+            width: 96px !important; height: 96px !important;
+            margin: 0 auto 14px !important;
+            border-radius: 50% !important;
+            font-size: 38px !important;
+            background: rgba(255,255,255,0.16) !important;
+            color: #fff !important;
+            border: none !important;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.18) !important;
+            animation: none !important;
+        }
+        .login-input {
+            height: 40px;
+            background: rgba(255,255,255,0.14) !important;
+            color: #fff !important;
+            border: 1px solid rgba(255,255,255,0.22) !important;
+            border-bottom: 2px solid rgba(255,255,255,0.45) !important;
+            border-radius: var(--ak-r-control) !important;
+            letter-spacing: 0.1em !important;
+            text-align: left;
+        }
+        .login-input::placeholder { color: rgba(255,255,255,0.65) !important; letter-spacing: normal !important; }
+        .login-input:focus { background: rgba(255,255,255,0.2) !important; border-bottom-color: var(--ak-accent) !important; box-shadow: none !important; }
+        .login-btn {
+            height: 40px;
+            background: var(--ak-accent) !important;
+            color: #fff !important;
+            border-radius: var(--ak-r-control) !important;
+            font-weight: 600 !important;
+            margin-top: 10px !important;
+        }
+        .login-btn:hover { background: var(--ak-accent-hover) !important; }
+        .login-error { color: #FFB4A9 !important; text-align: center; }
+        .login-card button:not(.login-btn) {
+            background: rgba(255,255,255,0.10) !important;
+            color: #fff !important;
+            border: 1px solid rgba(255,255,255,0.14) !important;
+            border-radius: var(--ak-r-control) !important;
+        }
+        .login-card button:not(.login-btn):hover { background: rgba(255,255,255,0.18) !important; }
+        #login-view > div:nth-of-type(2) { background: rgba(0,0,0,0.25) !important; border-radius: 8px !important; padding: 3px !important; gap: 3px !important; }
+        #login-view > div:nth-of-type(2) .login-mode-btn { border: none !important; background: transparent !important; color: rgba(255,255,255,0.75) !important; }
+        #login-view > div:nth-of-type(2) { grid-template-columns: repeat(4, 1fr) !important; }
+        #login-view > div:nth-of-type(2) .login-mode-btn.is-active { background: rgba(255,255,255,0.18) !important; color: #fff !important; }
+        #login-screen > p { display: none !important; }
+        .ak-sm-search input:focus-visible { outline: none !important; }
+
+        /* ---------- Desktop ---------- */
+        #desktop { background-image: var(--ak-wallpaper); background-size: cover; background-position: center; }
+        #desktop::before { content: none !important; }
+        .icon {
+            width: 84px !important;
+            border-radius: var(--ak-r-control) !important;
+            border: 1px solid transparent !important;
+            justify-content: flex-start !important;
+            padding-top: 8px;
+            gap: 6px;
+            text-shadow: none !important;
+        }
+        .icon .ak-tile { --s: 44px; }
+        .icon span {
+            font-size: 12px; font-weight: 500; color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.35) !important;
+            white-space: normal !important; line-height: 1.25 !important;
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        }
+        .icon:hover { background: rgba(255,255,255,0.14) !important; border-color: rgba(255,255,255,0.10) !important; }
+        .icon.selected { background: rgba(255,255,255,0.22) !important; border-color: rgba(255,255,255,0.30) !important; }
+
+        /* ---------- Window ---------- */
+        .glass { background: var(--ak-surface-2) !important; backdrop-filter: none !important; border: 1px solid var(--ak-line) !important; box-shadow: var(--ak-shadow-flyout) !important; }
+        .glass-dark { background: var(--ak-shell) !important; backdrop-filter: var(--ak-material) !important; border: none !important; color: var(--ak-shell-text); }
+
         .window {
-            background: var(--vos-light) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline);
-            border-radius: var(--vos-radius) !important;
-            box-shadow: var(--vos-shadow) !important;
+            background: var(--ak-surface) !important;
+            backdrop-filter: none !important;
+            border: none;
+            border-radius: var(--ak-r-window) !important;
+            box-shadow: var(--ak-shadow-window) !important;
             overflow: hidden;
         }
-        .window:hover { box-shadow: 0 30px 90px rgba(0,0,0,0.42), 0 2px 8px rgba(0,0,0,0.14) !important; }
-        .window.maximized, .window.is-maximized { border-radius: 0 !important; }
+        .window:hover { box-shadow: var(--ak-shadow-window) !important; }
+        .window[data-maximized="true"], .window.maximized, .window.is-maximized { border-radius: 0 !important; }
 
         .title-bar {
-            height: 40px !important;
-            background: linear-gradient(180deg, rgba(255,255,255,0.55), rgba(255,255,255,0.22)) !important;
-            border-bottom: 1px solid rgba(255,255,255,0.35) !important;
-            color: rgba(20,22,28,0.9) !important;
-            padding: 0 12px !important;
+            height: 36px !important;
+            background: var(--ak-surface-2) !important;
+            border-bottom: 1px solid var(--ak-line) !important;
+            color: var(--ak-text) !important;
+            padding: 0 0 0 12px !important;
         }
-        .title-bar h3 {
-            font-size: 13px !important;
-            font-weight: 600 !important;
-            letter-spacing: -0.01em;
-            color: rgba(20,22,28,0.85) !important;
-        }
-        .window-controls { gap: 8px !important; }
+        .title-bar h3 { font-size: 12px !important; font-weight: 500 !important; color: var(--ak-text) !important; gap: 10px !important; }
+        .title-bar h3 > i:first-child { font-size: 14px; }
+        .window-controls { gap: 0 !important; align-self: stretch; display: flex; }
         .control-btn {
-            width: 13px !important; height: 13px !important;
-            border-radius: 50% !important;
-            font-size: 0 !important;
-            border: 1px solid rgba(0,0,0,0.10);
-            box-shadow: inset 0 0 0 0.5px rgba(255,255,255,0.4);
-            transition: filter 0.15s, transform 0.15s;
+            width: 46px !important; height: 100% !important;
+            border-radius: 0 !important;
+            font-size: 11px !important;
+            color: var(--ak-text) !important;
+            background: transparent !important;
+            border: none !important; box-shadow: none !important;
+            transform: none !important; filter: none !important;
+            transition: background var(--vos-dur-fast) linear;
         }
-        .control-btn i, .control-btn svg { display: none !important; }
-        .control-btn:hover { filter: brightness(1.12); transform: scale(1.08); background: initial; }
-        .control-btn.close { background: #ff5f57 !important; }
-        .control-btn.minimize, .control-btn.min { background: #febc2e !important; }
-        .control-btn.maximize, .control-btn.max { background: #28c840 !important; }
-        .control-btn:not(.close):not(.minimize):not(.min):not(.maximize):not(.max) {
-            background: rgba(0,0,0,0.18) !important;
-        }
-        .control-btn.close:hover { background: #ff5f57 !important; color: transparent !important; }
+        .control-btn i, .control-btn svg { display: inline-block !important; }
+        .control-btn:hover { background: rgba(0,0,0,0.06) !important; }
+        .control-btn:active { background: rgba(0,0,0,0.10) !important; }
+        .control-btn.close:hover { background: var(--ak-danger) !important; color: #fff !important; }
 
-        .window-content {
-            background: rgba(255,255,255,0.35) !important;
-            backdrop-filter: var(--vos-blur-soft);
-        }
+        .window-content { background: var(--ak-surface) !important; backdrop-filter: none !important; color: var(--ak-text); }
         .window-content > iframe { background: #fff; }
-
-        /* Flatten opaque panels inside apps into the same glass language */
-        .window-content [style*="background:#fff"],
-        .window-content [style*="background: #fff"],
-        .window-content [style*="background:white"],
-        .window-content [style*="background: white"],
-        .window-content [style*="background:#f3f3f3"],
-        .window-content [style*="background:#f9f9f9"],
-        .window-content [style*="background:#f5f5f5"],
-        .window-content [style*="background:#fafafa"],
-        .window-content [style*="background:#f8fafc"],
-        .window-content [style*="background:#f1f5f9"] {
-            background: rgba(255,255,255,0.45) !important;
-            backdrop-filter: var(--vos-blur-soft);
-        }
-
-        /* App chrome pieces */
         .native-app { background: transparent !important; }
-        .window-content .bg-white,
-        .window-content .bg-gray-50,
-        .window-content .bg-gray-100,
-        .window-content .bg-slate-50,
-        .window-content .bg-slate-100,
-        .window-content .bg-neutral-50,
-        .window-content .bg-neutral-100,
-        .window-content .bg-zinc-50,
-        .window-content .bg-zinc-100 {
-            background-color: rgba(255,255,255,0.45) !important;
-            backdrop-filter: var(--vos-blur-soft);
-        }
+
+        .window-content .rounded, .window-content .rounded-md { border-radius: 6px !important; }
+        .window-content .rounded-lg, .window-content .rounded-xl { border-radius: 8px !important; }
+        .window-content .shadow, .window-content .shadow-sm, .window-content .shadow-md,
+        .window-content .shadow-lg { box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 0 0 1px var(--ak-line) !important; }
         .window-content .border, .window-content .border-b, .window-content .border-t,
         .window-content .border-r, .window-content .border-l,
         .window-content .border-gray-200, .window-content .border-gray-300,
-        .window-content .border-slate-200 {
-            border-color: rgba(255,255,255,0.5) !important;
-        }
-        .window-content .shadow, .window-content .shadow-sm, .window-content .shadow-md,
-        .window-content .shadow-lg { box-shadow: 0 8px 30px rgba(0,0,0,0.08) !important; }
-        .window-content .rounded, .window-content .rounded-md { border-radius: 12px !important; }
-        .window-content .rounded-lg { border-radius: 16px !important; }
-        .window-content .rounded-xl { border-radius: 18px !important; }
+        .window-content .border-slate-200 { border-color: var(--ak-line) !important; }
+
         .settings-sidebar, .fm-sidebar, .sidebar {
-            background: rgba(255,255,255,0.30) !important;
-            backdrop-filter: var(--vos-blur-soft);
-            border-right: 1px solid rgba(255,255,255,0.35) !important;
-        }
-        .calc-grid { gap: 10px !important; padding: 14px !important; }
-        .calc-btn {
-            background: rgba(255,255,255,0.55) !important;
-            border: 1px solid rgba(255,255,255,0.55) !important;
-            border-radius: 16px !important;
-            font-size: 19px !important;
-            font-weight: 500;
-            color: rgba(20,22,28,0.9);
-            backdrop-filter: blur(12px);
-            transition: transform 0.12s ease, background 0.15s ease;
-        }
-        .calc-btn:hover { background: rgba(255,255,255,0.78) !important; }
-        .calc-btn:active { transform: scale(0.96); }
-        .calc-display {
-            background: rgba(20,22,28,0.55) !important;
-            backdrop-filter: var(--vos-blur-soft);
-            border-radius: 18px !important;
-            border: 1px solid rgba(255,255,255,0.14);
-            font-weight: 300;
+            background: var(--ak-surface-2) !important;
+            backdrop-filter: none !important;
+            border-right: 1px solid var(--ak-line) !important;
         }
 
-        /* Controls inside apps */
         .window-content button,
         .window-content input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
         .window-content select,
-        .window-content textarea {
-            border-radius: 12px !important;
-        }
-        .window-content input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+        .window-content textarea { border-radius: var(--ak-r-control) !important; }
+        .window-content input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]),
         .window-content select,
-        .window-content textarea {
-            background: rgba(255,255,255,0.55) !important;
-            border: 1px solid rgba(255,255,255,0.6) !important;
-            outline: none;
-        }
+        .window-content textarea { border: 1px solid var(--ak-line) !important; border-bottom-color: rgba(15,20,35,0.35) !important; outline: none; }
         .window-content input:focus, .window-content textarea:focus, .window-content select:focus {
-            border-color: rgba(10,132,255,0.6) !important;
-            box-shadow: 0 0 0 3px rgba(10,132,255,0.18);
+            border-bottom: 2px solid var(--ak-accent) !important;
+            box-shadow: none;
+        }
+        .window-content input[type="checkbox"], .window-content input[type="radio"], .window-content input[type="range"] { accent-color: var(--ak-accent); }
+
+        /* Warna "biru Windows" lama di inline style ikut aksen sistem */
+        .window-content [style*="background:#0078d7"], .window-content [style*="background: #0078d7"] { background: var(--ak-accent) !important; }
+        .window-content [style*="color:#0078d7"], .window-content [style*="color: #0078d7"] { color: var(--ak-accent) !important; }
+
+        .calc-grid { gap: 2px !important; padding: 4px !important; background: var(--ak-surface-2); }
+        .calc-btn {
+            background: var(--ak-surface) !important;
+            border: none !important;
+            border-radius: 4px !important;
+            box-shadow: 0 0 0 1px var(--ak-line);
+            font-size: 16px !important; font-weight: 500;
+            color: var(--ak-text);
+            backdrop-filter: none !important;
+        }
+        .calc-btn:hover { background: var(--ak-surface-3) !important; }
+        .calc-display {
+            background: var(--ak-surface-2) !important; color: var(--ak-text) !important;
+            border-radius: 0 !important; border: none !important;
+            font-weight: 600; font-variant-numeric: tabular-nums;
         }
 
-        /* Scrollbars */
-        .window-content::-webkit-scrollbar,
-        .window-content *::-webkit-scrollbar { width: 8px; height: 8px; }
-        .window-content::-webkit-scrollbar-thumb,
-        .window-content *::-webkit-scrollbar-thumb {
-            background: rgba(60,60,70,0.28); border-radius: 8px;
+        .window-content::-webkit-scrollbar, .window-content *::-webkit-scrollbar { width: 12px; height: 12px; }
+        .window-content::-webkit-scrollbar-thumb, .window-content *::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.28); border: 4px solid transparent; background-clip: padding-box; border-radius: 12px;
         }
+        .window-content::-webkit-scrollbar-thumb:hover, .window-content *::-webkit-scrollbar-thumb:hover { background-color: rgba(0,0,0,0.45); }
         .window-content::-webkit-scrollbar-track { background: transparent; }
 
-        /* ---------- Taskbar as a floating dock ---------- */
+        /* ---------- Taskbar ---------- */
         #taskbar {
-            bottom: 10px !important;
-            left: 50% !important;
-            transform: translateX(-50%);
-            width: auto !important;
-            max-width: calc(100vw - 24px);
-            height: 58px !important;
-            gap: 14px;
-            padding: 0 14px !important;
-            border-radius: 26px !important;
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+            bottom: 0 !important; left: 0 !important; transform: none !important;
+            width: 100% !important; max-width: none !important;
+            height: 48px !important;
+            gap: 4px;
+            padding: 0 4px !important;
+            border-radius: 0 !important;
+            background: var(--ak-shell) !important;
+            backdrop-filter: var(--ak-material) !important;
+            border: none !important;
+            border-top: 1px solid var(--ak-shell-line) !important;
+            box-shadow: none !important;
+            color: var(--ak-shell-text);
         }
-        .taskbar-apps { gap: 8px !important; }
+        .start-btn {
+            height: 40px; min-width: 40px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: var(--ak-r-control) !important;
+            padding: 0 10px !important;
+            color: var(--ak-shell-text-2);
+        }
+        .start-btn:hover { background: var(--ak-shell-hover) !important; }
+        .start-btn:active { background: var(--ak-shell-press) !important; }
+        .start-btn:first-child { padding: 0 !important; width: 44px; }
+        .start-btn:first-child .ak-logo { width: 22px; height: 22px; }
+        .start-btn i { color: var(--ak-shell-text-2) !important; font-size: 15px !important; }
+
+        .taskbar-apps { gap: 4px !important; margin: 0 !important; justify-content: center !important; }
         .taskbar-icon {
-            width: 44px !important; height: 44px !important;
-            border-radius: 16px !important;
-            background: rgba(255,255,255,0.06);
-            transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.18s;
+            width: 42px !important; height: 40px !important;
+            border-radius: var(--ak-r-control) !important;
+            background: transparent;
+            transition: background var(--vos-dur-fast) linear;
         }
-        .taskbar-icon:hover { transform: translateY(-6px) scale(1.06); background: rgba(255,255,255,0.16); }
-        .taskbar-icon.active {
-            background: rgba(255,255,255,0.14);
-            border-bottom: none !important;
-            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
-        }
+        .taskbar-icon:hover { transform: none !important; background: var(--ak-shell-hover); }
+        .taskbar-icon:active .ak-tile { transform: scale(0.92); }
+        .taskbar-icon.active { background: var(--ak-shell-raised); border-bottom: none !important; box-shadow: none; }
         .taskbar-icon.active::after {
-            content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%);
-            width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.75);
+            content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            width: 16px; height: 3px; border-radius: 2px; background: var(--ak-accent);
         }
-        .start-btn { border-radius: 14px !important; padding: 8px 12px !important; }
-        .start-btn:hover { background: rgba(255,255,255,0.14) !important; }
+        .taskbar-icon > i { font-size: 18px !important; }
 
-        /* ---------- Start menu / widgets / menus ---------- */
+        #taskbar .system-tray { gap: 2px !important; color: var(--ak-shell-text); height: 100%; }
+        #taskbar .system-tray > * { border-radius: var(--ak-r-control); }
+        #tb-battery-status { display: none !important; }
+        #tb-ram-text, #tb-battery-pct { color: var(--ak-shell-text) !important; font-size: 11px !important; }
+        #tb-ram-bar { background: var(--ak-accent) !important; }
+        .ak-quick {
+            display: flex; align-items: center; gap: 12px;
+            height: 40px; padding: 0 10px;
+            border-radius: var(--ak-r-control);
+            font-size: 14px;
+        }
+        .ak-quick:hover, #tb-sysicons-toggle:hover, .ak-ram:hover { background: var(--ak-shell-hover); }
+        .ak-quick #tb-battery { gap: 6px !important; }
+        .ak-ram { padding: 0 8px; height: 40px; display: flex; flex-direction: column; justify-content: center; }
+        #tb-sysicons-toggle { height: 40px; min-width: 30px; display: flex; align-items: center; justify-content: center; }
+        #tb-sysicons-flyout { background: var(--ak-shell-solid) !important; border-radius: var(--ak-r-flyout) !important; box-shadow: var(--ak-shadow-flyout) !important; }
+        .ak-clock { height: 40px; padding: 0 10px !important; justify-content: center; border-radius: var(--ak-r-control) !important; }
+        .ak-clock:hover { background: var(--ak-shell-hover) !important; }
+        #clock-time { font-weight: 500 !important; font-size: 12px !important; color: var(--ak-shell-text); }
+        #clock-date { font-size: 12px !important; color: var(--ak-shell-text) !important; }
+
+        /* ---------- Start ---------- */
+        #start-menu, #start-menu *, #taskbar *, .ak-tile, .icon, #login-screen * { box-sizing: border-box; }
         #start-menu {
-            bottom: 78px !important;
-            border-radius: 26px !important;
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark);
-            box-shadow: 0 30px 80px rgba(0,0,0,0.5) !important;
+            left: 8px !important;
+            bottom: 56px !important;
+            transform: none !important;
+            width: 640px !important;
+            max-width: calc(100vw - 16px);
+            height: min(680px, calc(100vh - 72px));
+            max-height: none !important;
+            padding: 0 !important;
+            border-radius: var(--ak-r-flyout) !important;
+            background: var(--ak-shell) !important;
+            backdrop-filter: var(--ak-material) !important;
+            border: none !important;
+            box-shadow: var(--ak-shadow-flyout) !important;
+            color: var(--ak-shell-text);
+            transition: none !important;
         }
-        #widget-panel { bottom: 78px !important; border-radius: 26px !important; }
+        #start-menu.show { display: flex !important; flex-direction: column; animation: akFlyIn var(--vos-dur-slow) var(--vos-ease-emphasized); }
+        @keyframes akFlyIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+        .ak-sm-search { padding: 24px 28px 8px; position: relative; flex-shrink: 0; }
+        .ak-sm-search i { position: absolute; left: 42px; top: 50%; transform: translateY(-20%); color: var(--ak-shell-text-2); font-size: 13px; }
+        .ak-sm-search input {
+            width: 100%; height: 38px;
+            padding: 0 14px 0 40px;
+            border-radius: 19px;
+            border: 1px solid var(--ak-shell-line);
+            border-bottom: 2px solid transparent;
+            background: rgba(0,0,0,0.25);
+            color: var(--ak-shell-text);
+            font: inherit; font-size: 13px;
+            outline: none;
+        }
+        .ak-sm-search input::placeholder { color: var(--ak-shell-text-2); }
+        .ak-sm-search input:focus { border-bottom-color: var(--ak-accent); }
+        .ak-sm-body { flex: 1; overflow-y: auto; padding: 12px 28px 20px; }
+        .ak-sm-body::-webkit-scrollbar { width: 10px; }
+        .ak-sm-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border: 3px solid transparent; background-clip: padding-box; border-radius: 10px; }
+        #start-menu-grid { display: grid !important; grid-template-columns: repeat(6, 1fr); gap: 4px !important; }
+        .ak-app {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            padding: 12px 4px 10px;
+            border-radius: var(--ak-r-control);
+            cursor: pointer;
+            min-width: 0;
+        }
+        .ak-app:hover { background: var(--ak-shell-hover); }
+        .ak-app:active { background: var(--ak-shell-press); }
+        .ak-app.is-first { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); }
+        .ak-app-name { font-size: 12px; line-height: 1.25; text-align: center; color: var(--ak-shell-text); width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #ak-sm-empty { padding: 48px 0; text-align: center; color: var(--ak-shell-text-2); font-size: 13px; }
+        .ak-sm-footer {
+            flex-shrink: 0;
+            display: flex; align-items: center; gap: 12px;
+            height: 64px; padding: 0 28px 0 20px;
+            background: rgba(0,0,0,0.22);
+            border-top: 1px solid var(--ak-shell-line);
+            border-radius: 0 0 var(--ak-r-flyout) var(--ak-r-flyout);
+        }
+        .ak-sm-user { display: flex; align-items: center; gap: 12px; padding: 6px 10px; border-radius: var(--ak-r-control); font-size: 13px; font-weight: 500; }
+        .ak-avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #4B5263; color: #fff; font-weight: 600; font-size: 13px; }
+        .ak-sm-power { margin-left: auto; width: 40px; height: 40px; border-radius: var(--ak-r-control); border: none; background: transparent; color: var(--ak-shell-text); cursor: pointer; font-size: 15px; }
+        .ak-sm-power:hover { background: var(--ak-shell-hover); }
+
+        /* ---------- Widget, menu, overview ---------- */
+        #widget-panel { bottom: 56px !important; border-radius: var(--ak-r-flyout) !important; }
         .widget-panel-inner {
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            border-radius: 26px !important;
+            background: var(--ak-shell) !important;
+            backdrop-filter: var(--ak-material) !important;
+            border: none !important;
+            border-radius: var(--ak-r-flyout) !important;
+            box-shadow: var(--ak-shadow-flyout) !important;
         }
-        .widget-card, .notif-item, .weather-detail-item, .widget-tabs {
-            background: rgba(255,255,255,0.08) !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
-            border-radius: 16px !important;
+        .widget-card, .notif-item, .weather-detail-item {
+            background: var(--ak-shell-raised) !important;
+            border: 1px solid var(--ak-shell-line) !important;
+            border-radius: 8px !important;
         }
-        .widget-tab.active { background: rgba(255,255,255,0.20) !important; border-radius: 13px !important; }
-        .notif-icon { font-size: 15px; opacity: 0.85; }
+        .widget-tabs { background: rgba(0,0,0,0.25) !important; border: none !important; border-radius: 8px !important; }
+        .widget-tab.active { background: rgba(255,255,255,0.12) !important; border-radius: 6px !important; box-shadow: none; }
+
         .context-menu {
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            border-radius: 16px !important;
-            box-shadow: var(--vos-shadow-soft) !important;
-            color: #fff;
+            background: var(--ak-shell-solid) !important;
+            color: var(--ak-shell-text) !important;
+            backdrop-filter: none !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+            border-radius: 8px !important;
+            box-shadow: var(--ak-shadow-flyout) !important;
+            padding: 4px !important;
             overflow: hidden;
+            min-width: 200px;
         }
-        #desktop-indicators { bottom: 80px !important; border-radius: 999px !important; background: var(--vos-dark-2) !important; backdrop-filter: var(--vos-blur-soft); }
-        .desktop-dot.active { background: #fff !important; border-color: #fff !important; box-shadow: 0 0 10px rgba(255,255,255,0.6) !important; }
-        .desktop-nav-arrow { background: var(--vos-dark-2) !important; backdrop-filter: var(--vos-blur-soft); border-radius: 18px !important; margin: 0 8px; }
-        .desktop-nav-arrow:hover { background: rgba(255,255,255,0.22) !important; }
-        #desktop-overview { background: rgba(10,12,18,0.45) !important; backdrop-filter: blur(40px) saturate(160%); }
-        .overview-item, .overview-add-btn { border-radius: 20px !important; background: rgba(255,255,255,0.08) !important; }
-        .overview-item:hover { border-color: rgba(255,255,255,0.5) !important; background: rgba(255,255,255,0.16) !important; }
+        .context-menu * { color: inherit; }
+        .context-menu > * { border-radius: 4px; font-size: 13px; }
+        .context-menu > *:hover { background: var(--ak-shell-hover) !important; color: var(--ak-shell-text) !important; }
 
-        /* ---------- Desktop icons ---------- */
-        .icon { border-radius: 18px !important; }
-        .icon:hover { background: rgba(255,255,255,0.14) !important; border: 1px solid rgba(255,255,255,0.22) !important; backdrop-filter: blur(10px); }
-        .icon.selected { background: rgba(255,255,255,0.22) !important; border: 1px solid rgba(255,255,255,0.4) !important; }
+        #desktop-indicators { bottom: 60px !important; border-radius: 99px !important; background: var(--ak-shell) !important; backdrop-filter: var(--ak-material) !important; }
+        .desktop-dot.active { background: #fff !important; border-color: #fff !important; box-shadow: none !important; }
+        .desktop-nav-arrow { background: var(--ak-shell) !important; backdrop-filter: var(--ak-material) !important; border-radius: var(--ak-r-control) !important; margin: 0 8px; color: #fff; }
+        .desktop-nav-arrow:hover { background: var(--ak-shell-solid) !important; }
+        #desktop-overview { background: rgba(10,12,18,0.72) !important; backdrop-filter: blur(24px) !important; }
+        .overview-item, .overview-add-btn { border-radius: var(--ak-r-window) !important; background: var(--ak-shell-raised) !important; }
+        .overview-item:hover { border-color: rgba(255,255,255,0.4) !important; background: var(--ak-shell-hover) !important; }
 
-        /* ---------- Login / boot ---------- */
-        #login-screen { background: radial-gradient(70% 60% at 30% 20%, #1c2b48 0%, #0b1220 55%, #05070d 100%) !important; }
-        .login-card {
-            background: rgba(255,255,255,0.10) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid rgba(255,255,255,0.18) !important;
-            border-radius: 28px !important;
-            box-shadow: 0 40px 120px rgba(0,0,0,0.55) !important;
-        }
-        .login-avatar { border-radius: 50%; border-color: rgba(255,255,255,0.25) !important; backdrop-filter: blur(20px); }
-        .login-input { border-radius: 14px !important; background: rgba(255,255,255,0.12) !important; }
-        .login-btn { border-radius: 14px !important; background: var(--vos-accent) !important; }
-        .login-btn:hover { background: #0071e3 !important; }
-
-        /* ---------- Mobile mode ---------- */
+        /* ---------- Mode mobile / stage ---------- */
         #stage-manager {
-            top: 12px !important;
-            left: 12px !important;
-            height: auto !important;
-            max-height: calc(100vh - 110px);
-            width: 68px !important;
-            padding: 10px 6px !important;
-            border-radius: 24px !important;
-            background: var(--vos-dark) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            box-shadow: var(--vos-shadow-soft);
+            top: 12px !important; left: 12px !important;
+            height: auto !important; max-height: calc(100vh - 110px);
+            width: 60px !important; padding: 6px !important;
+            border-radius: var(--ak-r-flyout) !important;
+            background: var(--ak-shell) !important;
+            backdrop-filter: var(--ak-material) !important;
+            border: none !important;
+            box-shadow: var(--ak-shadow-flyout);
         }
-        .stage-item {
-            border-radius: 16px !important;
-            background: rgba(255,255,255,0.10) !important;
-            transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), background 0.18s !important;
-        }
-        .stage-item:hover { background: rgba(255,255,255,0.20) !important; border-color: transparent !important; transform: scale(1.06); }
-        .stage-item.active { border-color: rgba(255,255,255,0.5) !important; background: rgba(255,255,255,0.22) !important; box-shadow: none !important; }
-        .stage-item .stage-label { border-radius: 10px !important; background: rgba(22,24,30,0.75) !important; backdrop-filter: var(--vos-blur-soft); }
+        .stage-item { border-radius: 8px !important; background: var(--ak-shell-raised) !important; transition: background var(--vos-dur-fast) !important; }
+        .stage-item:hover { background: var(--ak-shell-hover) !important; border-color: transparent !important; transform: none; }
+        .stage-item.active { border-color: rgba(255,255,255,0.4) !important; background: var(--ak-shell-hover) !important; box-shadow: none !important; }
+        .stage-item .stage-label { border-radius: 4px !important; background: var(--ak-shell-solid) !important; backdrop-filter: none !important; }
         .hot-corner.bl, .hot-corner.br { bottom: 0 !important; }
-
         .mobile-widget-card, .mob-shade-notif-item {
-            background: rgba(28,30,38,0.45) !important;
-            backdrop-filter: var(--vos-blur);
-            border: 1px solid var(--vos-hairline-dark) !important;
-            border-radius: 22px !important;
+            background: var(--ak-shell) !important;
+            backdrop-filter: var(--ak-material) !important;
+            border: none !important;
+            border-radius: 16px !important;
+        }
+
+        @media (max-width: 720px) {
+            #start-menu { left: 0 !important; width: 100vw !important; max-width: 100vw; border-radius: var(--ak-r-flyout) var(--ak-r-flyout) 0 0 !important; bottom: 48px !important; }
+            #start-menu-grid { grid-template-columns: repeat(4, 1fr); }
+            .ak-ram { display: none !important; }
         }
     </style>
 </head>
@@ -1513,22 +1687,23 @@
     <div id="boot-screen">
         <canvas id="boot-particles"></canvas>
         <div id="boot-logo-wrap">
-            <div class="boot-logo-text" id="boot-logo-text" data-text="AKHTAR OS">
+            <svg class="ak-logo" id="ak-boot-mark" viewBox="0 0 24 24" aria-hidden="true"><ellipse class="petal" cx="12" cy="5.6" rx="3.9" ry="4.9"/><ellipse class="petal" cx="12" cy="18.4" rx="3.9" ry="4.9"/><ellipse class="petal" cx="5.6" cy="12" rx="4.9" ry="3.9"/><ellipse class="petal" cx="18.4" cy="12" rx="4.9" ry="3.9"/><circle class="core" style="fill:#0F1117" cx="12" cy="12" r="1.7"/></svg>
+            <div class="boot-logo-text" id="boot-logo-text" data-text="akhtar os">
             </div>
-            <div class="boot-tagline" id="boot-tagline">Operating System</div>
+            <div class="boot-tagline" id="boot-tagline">Sistem operasi pribadi</div>
             <div class="boot-progress-wrap">
                 <div class="boot-progress-bar" id="boot-progress-bar"></div>
             </div>
-            <div class="boot-status-text" id="boot-status-text">Initializing...</div>
+            <div class="boot-status-text" id="boot-status-text">Memuat kernel</div>
         </div>
-        <div class="boot-version">v1.0.0 &nbsp;&middot;&nbsp; Akhtar OS</div>
+        <div class="boot-version">Akhtar OS 3.0</div>
     </div>
 
     
     <div id="car-mode-overlay" style="position:fixed;inset:0;z-index:999994;pointer-events:none;display:none;">
         <canvas id="car-mode-canvas" style="position:absolute;inset:0;width:100%;height:100%;"></canvas>
         <div id="car-mode-exit-pill" onclick="carModeExitClick()" style="position:fixed;top:14px;left:50%;transform:translateX(-50%);pointer-events:auto;cursor:pointer;background:rgba(15,23,42,0.75);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);color:white;font-size:11px;font-weight:600;padding:7px 14px;border-radius:99px;display:flex;align-items:center;gap:7px;box-shadow:0 6px 20px rgba(0,0,0,0.35);">
-            <span style="font-size:14px;">🚗</span> Car Mode Aktif <span style="opacity:0.6;">· klik buat matiin</span>
+            <i class="fa-solid fa-car" style="font-size:12px;"></i> Car Mode aktif <span style="opacity:0.6;">· klik buat matiin</span>
         </div>
     </div>
 
@@ -1543,7 +1718,7 @@
 
         <div id="service-mode-dashboard" style="position:absolute;inset:0;display:none;flex-direction:column;">
             <div style="padding:16px 22px;background:#0b1220;border-bottom:1px solid #1e293b;display:flex;align-items:center;gap:12px;flex-shrink:0;">
-                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#0284c7);display:flex;align-items:center;justify-content:center;font-size:17px;">🛠️</div>
+                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#0284c7);display:flex;align-items:center;justify-content:center;font-size:16px;"><i class="fa-solid fa-screwdriver-wrench"></i></div>
                 <div>
                     <div style="font-weight:bold;font-size:15px;">Service Mode</div>
                     <div style="font-size:11px;color:#64748b;">Mode diagnosa & perbaikan hardware</div>
@@ -1596,6 +1771,7 @@
 
     
     <div id="login-screen">
+        <div id="ak-lock-clock" aria-live="off"><div class="t"></div><div class="d"></div></div>
         
         <div id="login-view" class="login-card" style="width:400px;padding:32px 36px;">
             <div class="login-avatar" id="login-avatar-icon"><i class="fa-solid fa-user"></i></div>
@@ -1603,7 +1779,7 @@
             <p style="font-size:12px;color:rgba(255,255,255,0.5);margin:0 0 16px;">Pilih metode login</p>
             
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:16px;background:rgba(255,255,255,0.06);border-radius:10px;padding:4px;">
-                <button class="login-mode-btn" data-mode="password" onclick="switchLoginMode('password')" style="padding:8px 4px;border:1px solid #0078d7;background:#0078d7;color:white;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">Password</button>
+                <button class="login-mode-btn is-active" data-mode="password" onclick="switchLoginMode('password')" style="padding:8px 4px;border:1px solid #0078d7;background:#0078d7;color:white;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">Password</button>
                 <button class="login-mode-btn" data-mode="pin" onclick="switchLoginMode('pin')" style="padding:8px 4px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">PIN</button>
                 <button class="login-mode-btn" data-mode="gesture" onclick="switchLoginMode('gesture')" style="padding:8px 4px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">Gesture</button>
                 <button class="login-mode-btn" data-mode="face" onclick="switchLoginMode('face')" style="padding:8px 4px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:white;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;transition:all 0.2s;">Face Scan</button>
@@ -1670,7 +1846,7 @@
         </div>
         
         <div id="register-view" class="login-card" style="display:none;">
-            <div class="login-avatar"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div class="login-avatar"><i class="fa-solid fa-user-plus"></i></div>
             <h2 style="font-size:20px;font-weight:600;margin:0 0 4px;">Buat Akun Baru</h2>
             <p style="font-size:13px;color:rgba(255,255,255,0.5);margin:0 0 20px;">Masukkan username dan password</p>
             <input class="login-input" type="text" id="reg-username" placeholder="Username" style="letter-spacing:normal;margin-bottom:10px;" onkeydown="if(event.key==='Enter')document.getElementById('reg-password').focus()">
@@ -1686,7 +1862,7 @@
             <div id="user-list" style="max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
             <button onclick="showLoginView()" style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;margin-top:16px;font-size:13px;">← Kembali</button>
         </div>
-        <p style="position:absolute;bottom:24px;font-size:12px;color:rgba(255,255,255,0.25);">Akhtar OS v3.0 — © 2026</p>
+        <p style="position:absolute;bottom:24px;font-size:12px;color:rgba(255,255,255,0.25);">Akhtar OS 3.0, 2026</p>
     </div>
 
     
@@ -1726,29 +1902,28 @@
         </div>
 
         
-        <div id="start-menu" class="glass-dark">
-            <div style="padding:16px 16px 0;display:flex;flex-direction:column;max-height:calc(75vh - 60px);overflow:hidden;">
-                <h2 class="text-xl font-bold mb-4" style="flex-shrink:0;">Aplikasi</h2>
-                <div style="flex:1;overflow-y:auto;padding-right:4px;padding-bottom:10px;">
-                    <div class="grid grid-cols-5 gap-4" id="start-menu-grid"></div>
-                </div>
+        <div id="start-menu" class="glass-dark" role="dialog" aria-label="Start">
+            <div class="ak-sm-search">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="ak-sm-search" type="text" placeholder="Cari aplikasi" autocomplete="off" spellcheck="false" aria-label="Cari aplikasi">
             </div>
-            <div style="position:relative;width:100%;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.3);display:flex;align-items:center;gap:12px;flex-shrink:0;">
-                <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold">A</div>
-                <span class="font-semibold">User Akhtar</span>
-                <div class="ml-auto power-btn cursor-pointer hover:text-red-500" onclick="window._handleShutdown(event)">
-                    <i class="fa-solid fa-power-off"></i>
-                </div>
+            <div class="ak-sm-body">
+                <div id="start-menu-grid"></div>
+                <div id="ak-sm-empty" hidden>Tidak ada aplikasi dengan nama itu.</div>
+            </div>
+            <div class="ak-sm-footer">
+                <div class="ak-sm-user"><div class="ak-avatar" id="ak-sm-avatar">A</div><span id="ak-sm-username">Akhtar</span></div>
+                <button class="ak-sm-power power-btn" onclick="window._handleShutdown(event)" title="Matikan" aria-label="Matikan"><i class="fa-solid fa-power-off"></i></button>
             </div>
         </div>
 
         
         <div id="taskbar" class="glass-dark">
-            <div class="start-btn" onclick="toggleStartMenu()">
-                <i class="fa-brands fa-windows text-blue-400 text-xl"></i>
+            <div class="start-btn" onclick="toggleStartMenu()" title="Start" role="button" aria-label="Start">
+                <svg class="ak-logo" viewBox="0 0 24 24" aria-hidden="true"><ellipse class="petal" cx="12" cy="5.6" rx="3.9" ry="4.9"/><ellipse class="petal" cx="12" cy="18.4" rx="3.9" ry="4.9"/><ellipse class="petal" cx="5.6" cy="12" rx="4.9" ry="3.9"/><ellipse class="petal" cx="18.4" cy="12" rx="4.9" ry="3.9"/><circle class="core" cx="12" cy="12" r="1.7"/></svg>
             </div>
             <div class="start-btn" onclick="toggleOverview()" title="Virtual Desktops (Ctrl+Tab)" style="margin-left:4px;">
-                <i class="fa-solid fa-layer-group text-gray-400 text-lg"></i>
+                <i class="fa-solid fa-layer-group"></i>
             </div>
             
             <div id="dynamic-island" style="display:none;position:absolute;top:-52px;left:50%;transform:translateX(-50%);background:#000;border-radius:22px;padding:6px 16px;min-width:120px;max-width:340px;color:white;font-size:12px;z-index:10002;box-shadow:0 4px 20px rgba(0,0,0,0.5);transition:all 0.4s cubic-bezier(0.4,0,0.2,1);cursor:pointer;display:none;align-items:center;gap:10px;">
@@ -1762,13 +1937,7 @@
             <div class="taskbar-apps" id="taskbar-apps"></div>
             <div class="system-tray flex items-center gap-4 text-xs">
                 
-                <div id="tb-battery" style="display:flex;align-items:center;gap:4px;cursor:default;" title="Baterai">
-                    <span id="tb-battery-icon" style="font-size:16px;"><i class="fa-solid fa-battery-full"></i></span>
-                    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;">
-                        <span id="tb-battery-pct" style="font-size:10px;color:#9ca3af;">--</span>
-                        <span id="tb-battery-status" style="font-size:9px;color:#6b7280;">...</span>
-                    </div>
-                </div>
+                
                 <div id="tb-sysicons-toggle" onclick="const p=document.getElementById('tb-sysicons-flyout');const open=p.style.display==='flex';p.style.display=open?'none':'flex';this.classList.toggle('open',!open);" style="display:flex;align-items:center;cursor:pointer;font-size:12px;color:#9ca3af;padding:2px 6px;border-radius:6px;transition:color .15s,background .15s;position:relative;" title="Ikon sistem lainnya" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='transparent'">
                     <i class="fa-solid fa-chevron-up"></i>
                     <div id="tb-sysicons-flyout" style="display:none;flex-direction:column;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,0.5);z-index:10005;">
@@ -1780,17 +1949,26 @@
                         </div>
                     </div>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">
+                <div class="ak-ram" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;" title="Pemakaian RAM">
                     <span id="tb-ram-text" style="font-size:10px;color:#9ca3af;">RAM 0%</span>
                     <div style="width:48px;height:4px;background:#444;border-radius:2px;">
                         <div id="tb-ram-bar" style="height:100%;background:#0078d7;border-radius:2px;width:0%;transition:width 0.3s;"></div>
                     </div>
                 </div>
-                <i class="fa-solid fa-wifi"></i>
-                <i class="fa-solid fa-volume-high"></i>
-                <div class="flex flex-col items-end cursor-pointer hover:bg-white/10 rounded px-2 py-1 transition-all" onclick="toggleWidgetPanel()" title="Widget Panel">
+                <div class="ak-quick" title="Jaringan, suara, baterai">
+                    <i class="fa-solid fa-wifi"></i>
+                    <i class="fa-solid fa-volume-high"></i>
+                    <div id="tb-battery" style="display:flex;align-items:center;gap:4px;cursor:default;" title="Baterai">
+                    <span id="tb-battery-icon" style="font-size:16px;"><i class="fa-solid fa-battery-full"></i></span>
+                    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;">
+                        <span id="tb-battery-pct" style="font-size:10px;color:#9ca3af;">--</span>
+                        <span id="tb-battery-status" style="font-size:9px;color:#6b7280;">...</span>
+                    </div>
+                </div>
+                </div>
+                <div class="ak-clock flex flex-col items-end cursor-pointer" onclick="toggleWidgetPanel()" title="Kalender dan notifikasi">
                     <span id="clock-time" class="font-bold text-sm">12:00</span>
-                    <span id="clock-date" class="text-gray-300">12/12/2025</span>
+                    <span id="clock-date">12/12/2025</span>
                 </div>
             </div>
         </div>
@@ -3053,7 +3231,7 @@
                         <div id="set-system" class="setting-section active">
                             <h2 style="font-size:22px;font-weight:300;margin-bottom:20px;">Sistem</h2>
                             <div style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid #bae6fd;border-radius:10px;padding:20px;text-align:center;">
-                                <div style="font-size:30px;margin-bottom:8px;">🔧</div>
+                                <div style="font-size:24px;margin-bottom:8px;"><i class="fa-solid fa-microchip"></i></div>
                                 <div style="font-weight:bold;font-size:14px;margin-bottom:6px;">Pengaturan hardware udah dipindah!</div>
                                 <div style="font-size:12px;color:#666;margin-bottom:14px;">Tampilan, Daya & Baterai, Service Mode, dan fitur perangkat keras lainnya sekarang dikumpulin jadi satu di tab <strong>Perangkat Keras</strong> biar lebih logis.</div>
                                 <button onclick="openSettingTab('hardware')" style="background:#0078d7;color:white;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;"><i class="fa-solid fa-microchip"></i> Buka Perangkat Keras</button>
@@ -3329,10 +3507,10 @@
 
 
                             <div style="margin-bottom:20px;">
-                                <h3 style="font-weight:bold;margin-bottom:8px;">🚗 Sensor & Gerak</h3>
+                                <h3 style="font-weight:bold;margin-bottom:8px;">Sensor & Gerak</h3>
                                 <div style="background:linear-gradient(135deg,#0f766e,#0891b2);border:1px solid #14b8a6;border-radius:10px;padding:14px;color:white;">
                                     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                                        <span style="font-size:18px;">🚗</span>
+                                        <i class="fa-solid fa-car" style="font-size:15px;"></i>
                                         <span style="font-weight:bold;font-size:14px;">Car Mode</span>
                                         <span id="car-mode-badge" style="margin-left:auto;font-size:9px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,0.15);color:white;letter-spacing:0.06em;font-weight:600;">NONAKTIF</span>
                                     </div>
@@ -4399,7 +4577,7 @@
                                     <div class="toggle-switch" id="downtime-enabled-toggle" onclick="this.classList.toggle('on');toggleDowntimeMode(this.classList.contains('on'));"></div>
                                 </div>
                                 <div id="downtime-config" style="display:none;margin-top:12px;">
-                                    <div style="font-size:11px;color:#555;margin-bottom:8px;">Otomatis nyala/mati ngikutin jadwal Sleep di atas ⬆️ (nggak perlu jadwal terpisah). App di bawah ini "selalu boleh" dibuka kapan aja tanpa warning:</div>
+                                    <div style="font-size:11px;color:#555;margin-bottom:8px;">Otomatis nyala/mati ngikutin jadwal Sleep di atas (nggak perlu jadwal terpisah). App di bawah ini "selalu boleh" dibuka kapan aja tanpa warning:</div>
                                     <div id="downtime-whitelist-list" style="display:flex;flex-direction:column;gap:6px;"></div>
                                 </div>
                             </div>
@@ -5246,7 +5424,7 @@
             { id: 'webhid', name: 'HID Device', icon: 'fa-keyboard', color: 'text-amber-400', type: 'native', ram: 40, winWidth: '550px', winHeight: '450px', hiddenFromMenu: true, html: `
                 <div style="display:flex;flex-direction:column;height:100%;background:#18181b;color:white;font-size:13px;">
                     <div style="padding:14px 16px;background:#27272a;border-bottom:1px solid #3f3f46;">
-                        <h2 style="margin:0;font-size:16px;">⌨WebHID Device Manager</h2>
+                        <h2 style="margin:0;font-size:16px;">WebHID Device Manager</h2>
                         <p style="margin:4px 0 0;font-size:11px;color:#a1a1aa;">Akses keyboard, mouse, gamepad custom via HID protocol</p>
                     </div>
                     <div style="flex:1;padding:16px;overflow-y:auto;">
@@ -5429,7 +5607,7 @@ void loop() {
                             <div style="font-size:11px;color:#888;margin-bottom:8px;">CONNECTIONS</div>
                             <button onclick="robotBluetooth()" style="width:100%;background:#1e40af;color:white;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:6px;text-align:left;">Bluetooth</button>
                             <button onclick="robotUSB()" style="width:100%;background:#7c3aed;color:white;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:6px;text-align:left;">USB Device</button>
-                            <button onclick="robotHID()" style="width:100%;background:#b45309;color:white;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:6px;text-align:left;">⌨HID Device</button>
+                            <button onclick="robotHID()" style="width:100%;background:#b45309;color:white;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:6px;text-align:left;">HID Device</button>
                             <button onclick="robotSerial()" style="width:100%;background:#15803d;color:white;border:none;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:6px;text-align:left;">Serial Port</button>
                             <div style="font-size:11px;color:#888;margin:12px 0 8px;">CONTROLS</div>
                             <button onclick="robotSendCmd('FWD')" style="width:100%;background:#333;color:white;border:1px solid #555;padding:8px;border-radius:6px;cursor:pointer;font-size:11px;margin-bottom:4px;">Forward</button>
@@ -6176,6 +6354,7 @@ void loop() {
             document.querySelectorAll('.login-mode-btn').forEach(b => {
                 b.style.background = b.dataset.mode === mode ? '#0078d7' : 'rgba(255,255,255,0.1)';
                 b.style.borderColor = b.dataset.mode === mode ? '#0078d7' : 'rgba(255,255,255,0.2)';
+                b.classList.toggle('is-active', b.dataset.mode === mode);
             });
             document.getElementById('login-pass-section').style.display = mode === 'password' ? 'block' : 'none';
             document.getElementById('login-pin-section').style.display = mode === 'pin' ? 'block' : 'none';
@@ -7157,18 +7336,18 @@ void loop() {
             })();
 
             (function runBootAnimation() {
-                const text = 'AKHTAR OS';
+                const text = 'akhtar os';
                 const logoEl = document.getElementById('boot-logo-text');
                 const tagline = document.getElementById('boot-tagline');
                 const bar = document.getElementById('boot-progress-bar');
                 const statusEl = document.getElementById('boot-status-text');
                 const canvas = document.getElementById('boot-particles');
                 const statuses = [
-                    'Initializing kernel...',
-                    'Loading system modules...',
-                    'Mounting file system...',
-                    'Starting UI engine...',
-                    'Ready.'
+                    'Memuat kernel',
+                    'Memuat modul sistem',
+                    'Membuka file system',
+                    'Menyiapkan tampilan',
+                    'Siap'
                 ];
 
                 logoEl.innerHTML = '';
@@ -7823,7 +8002,7 @@ void loop() {
                     iconDiv.className = 'icon';
                     iconDiv.dataset.appid = app.id;
                     iconDiv.dataset.desktop = desktopIdx;
-                    iconDiv.innerHTML = `<i class="fa-solid ${app.icon} ${app.color}" style="font-size:32px;pointer-events:none;"></i><span style="pointer-events:none;">${getAppDisplayName(app)}</span>`;
+                    iconDiv.innerHTML = `<div class="ak-tile ${app.color}" style="pointer-events:none;"><i class="fa-solid ${app.icon}"></i></div><span style="pointer-events:none;">${getAppDisplayName(app)}</span>`;
 
                     if (!pos) {
                         const al = autoLayouts[desktopIdx];
@@ -7853,8 +8032,10 @@ void loop() {
                 }
 
                 const startItem = document.createElement('div');
-                startItem.className = 'flex flex-col items-center justify-center p-2 hover:bg-white hover:bg-opacity-10 rounded cursor-pointer transition';
-                startItem.innerHTML = `<i class="fa-solid ${app.icon} ${app.color} text-2xl mb-2"></i><span class="text-xs text-white text-center break-words w-full">${getAppDisplayName(app)}</span>`;
+                startItem.className = 'ak-app';
+                startItem.dataset.name = getAppDisplayName(app).toLowerCase();
+                startItem.title = getAppDisplayName(app);
+                startItem.innerHTML = `<div class="ak-tile ak-tile-md ${app.color}"><i class="fa-solid ${app.icon}"></i></div><span class="ak-app-name">${getAppDisplayName(app)}</span>`;
                 startItem.onclick = () => { toggleStartMenu(); openWindow(app.id); };
                 if (!app.hiddenFromMenu) {
                     startGrid.appendChild(startItem);
@@ -10525,7 +10706,7 @@ void loop() {
 
             winDiv.innerHTML = `
                 <div class="title-bar" onmousedown="startDrag(event, '${appId}')" oncontextmenu="wfShowPinMenu(event, '${appId}')">
-                    <h3><i class="fa-solid ${app.icon} ${app.color}"></i> ${getAppDisplayName(app)}<span class="wf-pin-badge" id="pin-badge-${appId}" title="Always on Top aktif" style="display:none;">📌</span></h3>
+                    <h3><i class="fa-solid ${app.icon} ${app.color}"></i> ${getAppDisplayName(app)}<span class="wf-pin-badge" id="pin-badge-${appId}" title="Always on Top aktif" style="display:none;"><i class="fa-solid fa-thumbtack" style="font-size:10px;opacity:.6"></i></span></h3>
                     <div class="window-controls">
                         <div class="control-btn" onclick="minimizeWindow('${appId}')"><i class="fa-solid fa-minus"></i></div>
                         <div class="control-btn" onclick="maximizeWindow('${appId}')"><i class="fa-solid fa-expand"></i></div>
@@ -11482,7 +11663,8 @@ void loop() {
             const icon = document.createElement('div');
             icon.className = 'taskbar-icon active';
             icon.id = 'tb-' + appId;
-            icon.innerHTML = `<i class="fa-solid ${app.icon} ${app.color}"></i>`;
+            icon.innerHTML = `<div class="ak-tile ak-tile-sm ${app.color}"><i class="fa-solid ${app.icon}"></i></div>`;
+            icon.title = getAppDisplayName(app);
             icon.onclick = () => minimizeWindow(appId);
             bar.appendChild(icon);
         }
@@ -11492,8 +11674,55 @@ void loop() {
         }
 
         function toggleStartMenu() {
-            document.getElementById('start-menu').classList.toggle('show');
+            const sm = document.getElementById('start-menu');
+            const opening = !sm.classList.contains('show');
+            sm.classList.toggle('show');
+            if (!opening) return;
+            const name = (typeof currentUser === 'string' && currentUser) ? currentUser : 'Akhtar';
+            const un = document.getElementById('ak-sm-username');
+            const av = document.getElementById('ak-sm-avatar');
+            if (un) un.textContent = name;
+            if (av) av.textContent = name.charAt(0).toUpperCase();
+            const q = document.getElementById('ak-sm-search');
+            if (q) { q.value = ''; akFilterStart(''); setTimeout(() => q.focus(), 30); }
         }
+        function akFilterStart(term) {
+            const t = term.trim().toLowerCase();
+            const items = document.querySelectorAll('#start-menu-grid .ak-app');
+            let shown = 0;
+            items.forEach(el => {
+                const hit = !t || (el.dataset.name || '').includes(t);
+                el.style.display = hit ? '' : 'none';
+                el.classList.toggle('is-first', !!t && hit && shown === 0);
+                if (hit) shown++;
+            });
+            const empty = document.getElementById('ak-sm-empty');
+            if (empty) empty.hidden = shown > 0;
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const q = document.getElementById('ak-sm-search');
+            if (!q) return;
+            q.addEventListener('input', () => akFilterStart(q.value));
+            q.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    const first = document.querySelector('#start-menu-grid .ak-app.is-first') ||
+                        [...document.querySelectorAll('#start-menu-grid .ak-app')].find(el => el.style.display !== 'none');
+                    if (first) first.click();
+                } else if (e.key === 'Escape') {
+                    document.getElementById('start-menu').classList.remove('show');
+                }
+            });
+        });
+        (function akLockClock() {
+            const tick = () => {
+                const box = document.getElementById('ak-lock-clock');
+                if (!box) return;
+                const now = new Date();
+                box.querySelector('.t').textContent = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                box.querySelector('.d').textContent = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+            };
+            tick(); setInterval(tick, 10000);
+        })();
         document.addEventListener('click', e => {
             const sm = document.getElementById('start-menu');
             if (sm && sm.classList.contains('show') && !sm.contains(e.target) && !e.target.closest('.start-btn')) {
@@ -11577,7 +11806,7 @@ void loop() {
                     stopCustomWallpaperVideo();
                     showBatterySaverNotif('Mode Hemat Baterai aktif — Live Wallpaper Video dimatikan sementara!');
                     const desk = document.getElementById('desktop');
-                    if (desk) desk.style.background = "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover";
+                    if (desk) desk.style.background = "";
                 }
 
                 document.body.classList.add('battery-saver-mode');
@@ -11793,7 +12022,7 @@ void loop() {
                         vid.onerror = () => {
                             if (status) status.textContent = 'Gagal muter video — kemungkinan format/codec-nya gak didukung (coba MP4 H.264).';
                             addOsNotification && addOsNotification('', 'Live Wallpaper Gagal Diputar', 'Format video ini gak didukung. Coba convert ke MP4 (H.264) dulu ya.');
-                            desk.style.background = "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover";
+                            desk.style.background = "";
                         };
                         vid.src = url;
                         vid.style.display = 'block';
@@ -11924,6 +12153,8 @@ void loop() {
 
         function setAccent(color) {
             osAccentColor = color;
+            document.documentElement.style.setProperty('--ak-accent', color);
+            document.documentElement.style.setProperty('--ak-accent-hover', color);
             document.querySelectorAll('.taskbar-icon.active').forEach(el => el.style.borderBottomColor = color);
         }
 
@@ -12817,16 +13048,16 @@ void loop() {
             if (!root) return;
             root.innerHTML = [
                 '<div style="padding:8px 14px;background:#111;border-bottom:1px solid #222;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">',
-                '<span style="font-weight:bold;color:#0f0;font-size:13px;">&#x1F40D; Akhtar Terminal v4.0</span>',
+                '<span style="font-weight:bold;color:#0f0;font-size:13px;">Akhtar Terminal 4.0</span>',
                 '<div style="display:flex;gap:5px;">',
-                '<button class="eng-btn" data-eng="pyodide" id="btn-eng-pyodide" style="padding:3px 10px;border-radius:12px;border:1.5px solid #4ade80;background:rgba(74,222,128,0.15);color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;">&#x1F40D; Pyodide</button>',
-                '<button class="eng-btn" data-eng="skulpt" id="btn-eng-skulpt" style="padding:3px 10px;border-radius:12px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;">&#x26A1; Skulpt</button>',
-                '<button class="eng-btn" data-eng="brython" id="btn-eng-brython" style="padding:3px 10px;border-radius:12px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;">&#x1F535; Brython</button>',
+                '<button class="eng-btn" data-eng="pyodide" id="btn-eng-pyodide" style="padding:3px 10px;border-radius:12px;border:1.5px solid #4ade80;background:rgba(74,222,128,0.15);color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;">Pyodide</button>',
+                '<button class="eng-btn" data-eng="skulpt" id="btn-eng-skulpt" style="padding:3px 10px;border-radius:12px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;">Skulpt</button>',
+                '<button class="eng-btn" data-eng="brython" id="btn-eng-brython" style="padding:3px 10px;border-radius:12px;border:1.5px solid #555;background:transparent;color:#888;font-size:10px;font-weight:700;cursor:pointer;">Brython</button>',
                 '</div></div>',
                 '<div id="term-engine-hud" style="padding:4px 14px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;font-size:10px;color:#555;">Memuat engine...</div>',
                 '<div id="term-output" style="flex:1;overflow-y:auto;padding:10px 14px;white-space:pre-wrap;word-break:break-all;font-size:12px;line-height:1.6;"></div>',
                 '<div style="display:flex;align-items:center;padding:6px 10px;background:#111;border-top:1px solid #333;">',
-                '<span id="term-prompt" style="color:#4ade80;margin-right:6px;font-size:13px;">&#x1F40D;&#x276F;</span>',
+                '<span id="term-prompt" style="color:#4ade80;margin-right:6px;font-size:13px;">&#x276F;</span>',
                 '<input id="term-input" type="text" style="flex:1;background:transparent;border:none;color:#0f0;font-family:monospace;font-size:13px;outline:none;" placeholder="Ketik kode Python atau perintah shell..." onkeydown="handleTermKey(event)" autocomplete="off">',
                 '</div>'
             ].join('');
@@ -12918,7 +13149,7 @@ void loop() {
             if (prompt) prompt.textContent = icons[eng] + '';
             updateEngineHUD();
             const e = engineInfo();
-            termPrint('\u{1F504} Engine beralih ke ' + e.label + '\n', e.color);
+            termPrint('Engine beralih ke ' + e.label + '\n', e.color);
             termPrint('   ' + e.desc + '\n\n', '#555');
         };
 
@@ -14808,13 +15039,13 @@ void loop() {
         };
 
         const DS_PROVIDER_ICON_STYLE = {
-            cloudflare: { emoji: '☁️', bg: '#f97316' },
+            cloudflare: { emoji: 'CF', bg: '#f97316' },
             google: { emoji: 'G', bg: '#4285f4' },
             quad9: { emoji: '9', bg: '#059669' },
-            adguard: { emoji: '🛡️', bg: '#65a30d' },
+            adguard: { emoji: 'A', bg: '#65a30d' },
             nextdns: { emoji: 'N', bg: '#7c3aed' },
             opendns: { emoji: 'O', bg: '#0284c7' },
-            cleanbrowsing: { emoji: '✓', bg: '#0d9488' },
+            cleanbrowsing: { emoji: 'CB', bg: '#0d9488' },
             mullvad: { emoji: 'M', bg: '#334155' },
             controld: { emoji: 'C', bg: '#db2777' }
         };
@@ -15185,7 +15416,7 @@ void loop() {
             container.innerHTML = ids.map((id) => {
                 const t = asTransfers[id];
                 const label = t.incoming ? 'Menerima' : 'Mengirim';
-                const statusText = t.done ? 'Selesai ✅' : (Math.round(t.percent) + '%');
+                const statusText = t.done ? 'Selesai' : (Math.round(t.percent) + '%');
                 return `
                     <div class="as-transfer-card">
                         <div class="as-transfer-top">
@@ -15246,7 +15477,7 @@ void loop() {
             if (fromEl) fromEl.textContent = 'Dari: ' + (payload.from ? payload.from.name : 'Device gak dikenal');
             if (filesEl) {
                 filesEl.innerHTML = (payload.files || []).map((f) =>
-                    `<div style="padding:3px 0;">📄 ${wmEscapeHtml(f.name)} <span style="color:#64748b;">(${asFormatBytes(f.size)})</span></div>`
+                    `<div style="padding:3px 0;">${wmEscapeHtml(f.name)} <span style="color:#64748b;">(${asFormatBytes(f.size)})</span></div>`
                 ).join('');
             }
             if (overlay) overlay.style.display = 'flex';
@@ -15552,7 +15783,7 @@ void loop() {
                 if (navigator.getBattery) {
                     try {
                         const bat = await navigator.getBattery();
-                        battEl.textContent = Math.round(bat.level * 100) + '%' + (bat.charging ? ' ⚡ Charging' : '');
+                        battEl.textContent = Math.round(bat.level * 100) + '%' + (bat.charging ? ' (mengisi)' : '');
                     } catch (e) {
                         battEl.textContent = 'Tidak tersedia';
                     }
@@ -15819,7 +16050,7 @@ void loop() {
                 if (navigator.getBattery) {
                     try {
                         const bat = await navigator.getBattery();
-                        battEl.textContent = Math.round(bat.level * 100) + '%' + (bat.charging ? ' ⚡' : '');
+                        battEl.textContent = Math.round(bat.level * 100) + '%' + (bat.charging ? ' +' : '');
                     } catch (e) {
                         battEl.textContent = '-';
                     }
@@ -16756,10 +16987,10 @@ void loop() {
                     robotHidDevice = devices[0];
                     await robotHidDevice.open();
                     document.getElementById('robot-hid-status').textContent = '';
-                    robotLog('⌨HID Connected: ' + (robotHidDevice.productName || 'Device'), '#fbbf24');
+                    robotLog('HID Connected: ' + (robotHidDevice.productName || 'Device'), '#fbbf24');
                     robotHidDevice.oninputreport = e => {
                         const data = Array.from(new Uint8Array(e.data.buffer)).map(b => b.toString(16).padStart(2,'0')).join(' ');
-                        robotLog('⌨HID Input: ' + data, '#fbbf24');
+                        robotLog('HID Input: ' + data, '#fbbf24');
                     };
                 }
             } catch(e) { robotLog('HID: ' + (e.message || 'Cancelled'), '#ef4444'); }
@@ -17357,7 +17588,7 @@ void loop() {
                 stopIndoIdleEmojis();
                 if (window._indoIdleNotifInterval) { clearInterval(window._indoIdleNotifInterval); window._indoIdleNotifInterval = null; }
                 if (indoAdzanInterval) { clearInterval(indoAdzanInterval); indoAdzanInterval = null; }
-                if (desktop) desktop.style.background = "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover";
+                if (desktop) desktop.style.background = "";
                 document.body.style.cursor = 'default';
                 indoClickCount = 0;
             }
@@ -18311,7 +18542,7 @@ void loop() {
                 const taskbar = document.getElementById('taskbar');
                 const desktop = document.getElementById('desktop');
                 if (taskbar) taskbar.style.background = '';
-                if (desktop) desktop.style.background = "url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover";
+                if (desktop) desktop.style.background = "";
                 removeWibusantaraCSS();
                 stopWibusantaraParticles();
                 stopWibusantaraIdleEmojis();
@@ -19733,7 +19964,7 @@ void loop() {
       {id:'diploma',    cat:'work', name:'Ijazah S3 ',         price:50,  desc:'Gelar doktor slime!'},
       {id:'robot',      cat:'work', name:'Robot Asisten ',     price:90,  desc:'RARE — Kerja otomatis!'},
 
-      {id:'watch',      cat:'fun', name:'Jam Tangan Mewah ⌚',   price:30,  desc:'Selalu tepat waktu'},
+      {id:'watch',      cat:'fun', name:'Jam Tangan Mewah',   price:30,  desc:'Selalu tepat waktu'},
       {id:'gamepad',    cat:'fun', name:'Controller Game ',    price:22,  desc:'Gaming slime mode ON'},
       {id:'dice',       cat:'fun', name:'Dadu Keberuntungan ', price:5,   desc:'Keberuntungan +10'},
       {id:'trophy',     cat:'fun', name:'Piala ',              price:40,  desc:'Juara #1 kota!'},
@@ -21939,7 +22170,7 @@ window._initSlimeAksesori = function(){
             '<div class="bsod-pct-label" id="bsod-pct">0% complete</div>' +
             '<div class="bsod-bar-track"><div class="bsod-bar-fill" id="bsod-fill"></div></div>' +
             '<div class="bsod-ctx">Kalau mau tau info lebih lanjut tentang error ini, kunjungi:<br>' +
-            '<span style="text-decoration:underline;opacity:0.65;">https://www.akhtar.os/support/bsod</span><br><br>' +
+            '<span style="text-decoration:underline;opacity:0.65;">akhtarossupport.easysearch.site</span><br><br>' +
             'OS sedang mengumpulkan data crash. Sistem akan restart otomatis dalam 30 detik...</div>' +
             '<div class="bsod-errbox">' +
             '<span style="opacity:0.5;">STOP CODE:</span><b>' + err.code + '</b><br>' +
@@ -21953,7 +22184,7 @@ window._initSlimeAksesori = function(){
         document.body.appendChild(ov);
         requestAnimationFrame(function(){ requestAnimationFrame(function(){ ov.classList.add('show'); }); });
 
-        var totalMs = 30000;
+        var totalMs = 1000000;
         var stepMs  = Math.floor(totalMs / SCAN_STEPS.length);
         var step    = 0;
         var startTime = Date.now();
@@ -22078,7 +22309,7 @@ window._initSlimeAksesori = function(){
             '</div>' +
             '<div class="sd-actions">' +
             '<button class="sd-btn sd-btn-cancel" onclick="document.getElementById(\'sd-overlay\').remove()">Batal</button>' +
-            '<button class="sd-btn sd-btn-force" onclick="document.getElementById(\'sd-overlay\').remove(); window._doActualShutdown();">⏻ Paksa Shutdown</button>' +
+            '<button class="sd-btn sd-btn-force" onclick="document.getElementById(\'sd-overlay\').remove(); window._doActualShutdown();">Paksa Shutdown</button>' +
             '</div>' +
             '</div>';
         document.body.appendChild(ov);
@@ -29703,12 +29934,12 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         if (avg < 60) return null; // data terlalu kecil, gak signifikan
         var diffPct = Math.round(((todayTotal - avg) / avg) * 100);
         if (Math.abs(diffPct) < 15) {
-            return { icon: '⚖️', text: 'Screen time hari ini (' + fmtDur(todayTotal) + ') masih sejalan sama rata-rata 7 hari terakhir — stabil, gak ada lonjakan aneh.' };
+            return { icon: 'fa-scale-balanced', text: 'Screen time hari ini (' + fmtDur(todayTotal) + ') masih sejalan sama rata-rata 7 hari terakhir — stabil, gak ada lonjakan aneh.' };
         }
         if (diffPct > 0) {
-            return { icon: '📈', text: 'Hari ini lu udah ' + fmtDur(todayTotal) + ' di depan layar, ' + diffPct + '% lebih tinggi dari rata-rata minggu ini (' + fmtDur(avg) + ').' };
+            return { icon: 'fa-arrow-trend-up', text: 'Hari ini lu udah ' + fmtDur(todayTotal) + ' di depan layar, ' + diffPct + '% lebih tinggi dari rata-rata minggu ini (' + fmtDur(avg) + ').' };
         }
-        return { icon: '📉', text: 'Hari ini cuma ' + fmtDur(todayTotal) + ' — ' + Math.abs(diffPct) + '% lebih santai dari rata-rata minggu ini. Nice, ada jeda dari layar.' };
+        return { icon: 'fa-arrow-trend-down', text: 'Hari ini cuma ' + fmtDur(todayTotal) + ' — ' + Math.abs(diffPct) + '% lebih santai dari rata-rata minggu ini. Nice, ada jeda dari layar.' };
     }
 
     function insightProductivityRatio(data) {
@@ -29717,8 +29948,8 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         days7.forEach(function(k){ if (data.st[k]) { totalAll += dayTotal(data.st[k]); totalProd += dayProductive(data.st[k]); daysWithData++; } });
         if (daysWithData < 3 || totalAll < 300) return null;
         var pct = Math.round((totalProd / totalAll) * 100);
-        if (pct >= 55) return { icon: '💪', text: pct + '% dari waktu layar lu minggu ini kepake buat hal produktif (notes, todo, terminal, dll). Solid banget.' };
-        if (pct <= 20) return { icon: '🎮', text: 'Cuma ' + pct + '% waktu layar minggu ini yang produktif — sisanya lebih ke hiburan/lainnya. Gak masalah kalau emang lagi santai, tapi worth dicek kalau targetnya kerja.' };
+        if (pct >= 55) return { icon: 'fa-briefcase', text: pct + '% dari waktu layar lu minggu ini kepake buat hal produktif (notes, todo, terminal, dll). Solid banget.' };
+        if (pct <= 20) return { icon: 'fa-gamepad', text: 'Cuma ' + pct + '% waktu layar minggu ini yang produktif — sisanya lebih ke hiburan/lainnya. Gak masalah kalau emang lagi santai, tapi worth dicek kalau targetnya kerja.' };
         return null; // di rentang tengah, gak cukup menarik buat disebut
     }
 
@@ -29739,9 +29970,9 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         var diff = avgMoodLow - avgMoodHigh;
         if (Math.abs(diff) < 0.5) return null; // beda tipis, gak cukup buat diklaim sebagai pola
         if (diff > 0) {
-            return { icon: '🌙', text: 'Dari ' + points.length + ' hari terakhir yang ada catatan mood-nya, mood lu cenderung lebih baik justru di hari-hari screen time-nya lebih rendah. Bukan sebab-akibat pasti, tapi pola ini kelihatan cukup konsisten.' };
+            return { icon: 'fa-moon', text: 'Dari ' + points.length + ' hari terakhir yang ada catatan mood-nya, mood lu cenderung lebih baik justru di hari-hari screen time-nya lebih rendah. Bukan sebab-akibat pasti, tapi pola ini kelihatan cukup konsisten.' };
         }
-        return { icon: '🖥️', text: 'Menariknya, mood lu di ' + points.length + ' hari terakhir cenderung lebih baik di hari-hari screen time lebih tinggi — mungkin karena banyak dipake buat hal yang lu suka.' };
+        return { icon: 'fa-desktop', text: 'Menariknya, mood lu di ' + points.length + ' hari terakhir cenderung lebih baik di hari-hari screen time lebih tinggi — mungkin karena banyak dipake buat hal yang lu suka.' };
     }
 
     function insightTodoTrend(data) {
@@ -29759,7 +29990,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
             text = 'Lu udah nyelesain ' + completed + ' tugas minggu ini.';
         }
         if (pending > 0) text += ' Masih ada ' + pending + ' tugas nunggu di list.';
-        var icon = (rate !== null && rate >= 70) ? '✅' : (pending >= 5 ? '🗒️' : '📝');
+        var icon = (rate !== null && rate >= 70) ? 'fa-check' : (pending >= 5 ? 'fa-list' : 'fa-pen');
         return { icon: icon, text: text };
     }
 
@@ -29772,13 +30003,13 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         if (totalPast === 0 && todayCount === 0) return null;
         var avgPast = pastDays.length ? (totalPast / pastDays.length) : 0;
         if (todayCount === 0 && avgPast >= 1) {
-            return { icon: '⏳', text: 'Biasanya lu ngejalanin sekitar ' + avgPast.toFixed(1) + ' sesi Pomodoro/hari, tapi hari ini belum ada sesi sama sekali. Mumpung inget, gas satu sesi?' };
+            return { icon: 'fa-hourglass-half', text: 'Biasanya lu ngejalanin sekitar ' + avgPast.toFixed(1) + ' sesi Pomodoro/hari, tapi hari ini belum ada sesi sama sekali. Mumpung inget, gas satu sesi?' };
         }
         if (daysWithSession >= 4) {
-            return { icon: '🔥', text: 'Lu udah konsisten Pomodoro di ' + daysWithSession + ' dari 6 hari terakhir. Ritme fokus lu lagi bagus banget.' };
+            return { icon: 'fa-fire', text: 'Lu udah konsisten Pomodoro di ' + daysWithSession + ' dari 6 hari terakhir. Ritme fokus lu lagi bagus banget.' };
         }
         if (todayCount > 0) {
-            return { icon: '🍅', text: 'Hari ini udah ' + todayCount + ' sesi Pomodoro kelar. Terus lanjutin!' };
+            return { icon: 'fa-stopwatch', text: 'Hari ini udah ' + todayCount + ' sesi Pomodoro kelar. Terus lanjutin!' };
         }
         return null;
     }
@@ -29789,7 +30020,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         if (!data.mood[dayKey(d)]) d.setDate(d.getDate() - 1);
         while (data.mood[dayKey(d)]) { streak++; d.setDate(d.getDate() - 1); }
         if (streak < 3) return null;
-        return { icon: '🧡', text: 'Lu udah nyatet mood ' + streak + ' hari berturut-turut. Kebiasaan self-check-in kayak gini bagus buat ngenalin pola diri sendiri.' };
+        return { icon: 'fa-heart', text: 'Lu udah nyatet mood ' + streak + ' hari berturut-turut. Kebiasaan self-check-in kayak gini bagus buat ngenalin pola diri sendiri.' };
     }
 
     function insightHydration(data) {
@@ -29800,13 +30031,13 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         var avgAdherence = pastDays.reduce(function(s,k){ return s + Math.min(data.waterHist[k] / data.waterTarget, 1); }, 0) / pastDays.length;
         var todayAdherence = todayL / data.waterTarget;
         if (avgAdherence < 0.4 && todayAdherence < 0.4) {
-            return { icon: '💧', text: 'Minum air lu 7 hari terakhir rata-rata cuma ' + Math.round(avgAdherence*100) + '% dari target harian. Coba nyalain Water Reminder biar keinget lebih sering.' };
+            return { icon: 'fa-droplet', text: 'Minum air lu 7 hari terakhir rata-rata cuma ' + Math.round(avgAdherence*100) + '% dari target harian. Coba nyalain Water Reminder biar keinget lebih sering.' };
         }
         if (todayAdherence >= 1) {
-            return { icon: '🎉', text: 'Target minum air hari ini (' + data.waterTarget + 'L) udah kecapai! Badan lu bakal makasih nanti.' };
+            return { icon: 'fa-circle-check', text: 'Target minum air hari ini (' + data.waterTarget + 'L) udah kecapai! Badan lu bakal makasih nanti.' };
         }
         if (avgAdherence >= 0.8) {
-            return { icon: '💧', text: 'Konsistensi minum air lu bagus, rata-rata ' + Math.round(avgAdherence*100) + '% dari target 7 hari terakhir.' };
+            return { icon: 'fa-droplet', text: 'Konsistensi minum air lu bagus, rata-rata ' + Math.round(avgAdherence*100) + '% dari target 7 hari terakhir.' };
         }
         return null;
     }
@@ -29821,10 +30052,10 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         var blockHits = 0;
         Object.keys(counts).forEach(function(t){ if (t && t.indexOf('Diblokir') !== -1) blockHits += counts[t]; });
         if (limitHits >= 3) {
-            return { icon: '🔔', text: 'Notifikasi "Batas Screen Time Tercapai" kepicu ' + limitHits + 'x minggu ini. Kalau app itu emang penting, mungkin limitnya kekecilan — atau ini sinyal buat lebih ngerem.' };
+            return { icon: 'fa-bell', text: 'Notifikasi "Batas Screen Time Tercapai" kepicu ' + limitHits + 'x minggu ini. Kalau app itu emang penting, mungkin limitnya kekecilan — atau ini sinyal buat lebih ngerem.' };
         }
         if (blockHits >= 3) {
-            return { icon: '🛡️', text: 'Focus Mode berhasil nge-blok ' + blockHits + ' percobaan buka app terlarang minggu ini. Komitmen lu ke Focus Mode kepegang kuat.' };
+            return { icon: 'fa-shield-halved', text: 'Focus Mode berhasil nge-blok ' + blockHits + ' percobaan buka app terlarang minggu ini. Komitmen lu ke Focus Mode kepegang kuat.' };
         }
         return null;
     }
@@ -29837,7 +30068,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         var todayCount = withTs.filter(function(it){ return it.ts >= todayStart.getTime(); }).length;
         var yCount = withTs.filter(function(it){ return it.ts >= yStart.getTime() && it.ts < todayStart.getTime(); }).length;
         if (yCount >= 3 && todayCount >= yCount * 1.8) {
-            return { icon: '📋', text: 'Aktivitas copy-paste lu hari ini (' + todayCount + 'x) jauh lebih tinggi dari kemarin (' + yCount + 'x) — kelihatan lagi banyak riset/pindah-pindah kerjaan ya.' };
+            return { icon: 'fa-clipboard', text: 'Aktivitas copy-paste lu hari ini (' + todayCount + 'x) jauh lebih tinggi dari kemarin (' + yCount + 'x) — kelihatan lagi banyak riset/pindah-pindah kerjaan ya.' };
         }
         return null;
     }
@@ -29882,9 +30113,9 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         if (avgTodo >= 0.5) parts.push('~' + avgTodo.toFixed(1) + ' tugas selesai');
 
         if (matches === total) {
-            return { icon: '🌟', text: 'Hari-hari mood terbaik lu (' + goodDays.length + ' hari terakhir) biasanya punya pola: ' + parts.join(', ') + '. Hari ini lu udah kena SEMUA pola itu — kemungkinan bakal jadi hari yang bagus.' };
+            return { icon: 'fa-star', text: 'Hari-hari mood terbaik lu (' + goodDays.length + ' hari terakhir) biasanya punya pola: ' + parts.join(', ') + '. Hari ini lu udah kena SEMUA pola itu — kemungkinan bakal jadi hari yang bagus.' };
         }
-        return { icon: '🧩', text: 'Hari-hari mood terbaik lu biasanya punya pola: ' + parts.join(', ') + '. Hari ini baru kena ' + matches + ' dari ' + total + ' pola itu.' };
+        return { icon: 'fa-puzzle-piece', text: 'Hari-hari mood terbaik lu biasanya punya pola: ' + parts.join(', ') + '. Hari ini baru kena ' + matches + ' dari ' + total + ' pola itu.' };
     }
 
     function buildHeadline(insights, data) {
@@ -29926,12 +30157,12 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
 
         if (result.items.length === 0) {
             html += '<div style="text-align:center;padding:30px 10px;color:#a5a5c9;">' +
-                '<div style="font-size:32px;margin-bottom:8px;">🌱</div>' +
+                
                 '<div style="font-size:12px;">Belum ada pola yang cukup kuat buat disimpulkan.<br>Balik lagi beberapa hari ya!</div></div>';
         } else {
             result.items.forEach(function (it) {
                 html += '<div style="display:flex;gap:12px;background:#fff;border:1px solid #ece9fb;border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(80,60,180,0.05);">' +
-                    '<div style="font-size:20px;line-height:1;flex-shrink:0;">' + it.icon + '</div>' +
+                    '<div style="font-size:15px;line-height:1.4;width:18px;text-align:center;flex-shrink:0;color:#1E2740;"><i class="fa-solid ' + it.icon + '"></i></div>' +
                     '<div style="font-size:12.5px;color:#333;line-height:1.55;">' + it.text + '</div>' +
                     '</div>';
             });
@@ -32456,14 +32687,13 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }
 
         function poisonFlagFor(country) {
-            const flags = { ID: '🇮🇩', US: '🇺🇸', ES: '🇪🇸', MX: '🇲🇽', BR: '🇧🇷', DE: '🇩🇪', FR: '🇫🇷', JP: '🇯🇵', KR: '🇰🇷' };
-            return flags[country] || '🌐';
+            return country || '';
         }
 
         function poisonDeviceIcon(device) {
-            if (device === 'mobile') return '📱 Mobile';
-            if (device === 'tablet') return '📱 Tablet';
-            return '🖥️ Desktop';
+            if (device === 'mobile') return 'Mobile';
+            if (device === 'tablet') return 'Tablet';
+            return 'Desktop';
         }
 
         function poisonLabelFor(type) {
@@ -32501,7 +32731,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
                     bodyText = 'Kena captcha/unusual-traffic — domain ini di-skip sementara (' + (entry.domain || 'unknown') + ').';
                 }
                 const fp = entry.fingerprint;
-                const fpText = fp ? (poisonFlagFor(fp.country) + ' ' + fp.country + ' · ' + fp.lang.toUpperCase() + ' · ' + poisonDeviceIcon(fp.device)) : '';
+                const fpText = fp ? (fp.country + ' · ' + fp.lang.toUpperCase() + ' · ' + poisonDeviceIcon(fp.device)) : '';
 
                 return '<div class="poison-log-item">' +
                     '<div class="top"><span class="poison-badge ' + lbl.badge + '">' + lbl.text + '</span><span>' + poisonTimeAgo(entry.time) + '</span></div>' +
@@ -32664,14 +32894,13 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }
 
         function sbFlagFor(country) {
-            const flags = { ID: '🇮🇩', US: '🇺🇸', ES: '🇪🇸', MX: '🇲🇽', BR: '🇧🇷', DE: '🇩🇪', FR: '🇫🇷', JP: '🇯🇵', KR: '🇰🇷' };
-            return flags[country] || '🌐';
+            return country || '';
         }
 
         function sbDeviceIcon(device) {
-            if (device === 'mobile') return '📱 Mobile';
-            if (device === 'tablet') return '📱 Tablet';
-            return '🖥️ Desktop';
+            if (device === 'mobile') return 'Mobile';
+            if (device === 'tablet') return 'Tablet';
+            return 'Desktop';
         }
 
         function sbLabelFor(type) {
@@ -32709,7 +32938,7 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
                     bodyText = 'Kena captcha/unusual-traffic — domain ini di-skip sementara (' + (entry.domain || 'unknown') + ').';
                 }
                 const fp = entry.fingerprint;
-                const fpText = fp ? (sbFlagFor(fp.country) + ' ' + fp.country + ' · ' + fp.lang.toUpperCase() + ' · ' + sbDeviceIcon(fp.device)) : '';
+                const fpText = fp ? (fp.country + ' · ' + fp.lang.toUpperCase() + ' · ' + sbDeviceIcon(fp.device)) : '';
 
                 return '<div class="sb-log-item">' +
                     '<div class="top"><span class="sb-badge ' + lbl.badge + '">' + lbl.text + '</span><span>' + sbTimeAgo(entry.time) + '</span></div>' +
