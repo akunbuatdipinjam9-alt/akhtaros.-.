@@ -677,6 +677,19 @@ contextBridge.exposeInMainWorld('akhtarPoison', {
 // dengan target opsional (website utama + kata kunci pencarian)
 // ==================================
 
+// ==================================
+// FINGERPRINT SPOOFER API (Canvas / WebGL / Font List)
+// ==================================
+
+contextBridge.exposeInMainWorld('akhtarFPSpoof', {
+  // Status sekarang: { enabled, canvas, webgl, fonts }
+  getStatus: () => ipcRenderer.invoke('fpspoof-get-status'),
+
+  // Nyalain/matiin + pilih submodul mana yang aktif.
+  // config = { enabled: bool, canvas: bool, webgl: bool, fonts: bool }
+  setConfig: (config) => ipcRenderer.invoke('fpspoof-set', config)
+});
+
 contextBridge.exposeInMainWorld('akhtarSearchBot', {
     start: () => ipcRenderer.invoke('search-bot-start'),
     stop: () => ipcRenderer.invoke('search-bot-stop'),
