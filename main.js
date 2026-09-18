@@ -710,6 +710,7 @@ function createTab(url, incognito) {
 
   view.webContents.on('destroyed', () => {
     spoofScriptIds.delete(tab.id);
+    fpSpoofScriptIds.delete(tab.id);
     browserTabs = browserTabs.filter((t) => t.id !== tab.id);
   });
 
@@ -717,6 +718,8 @@ function createTab(url, incognito) {
 
   // Tab baru langsung ikutan spoof lokasi/timezone yang lagi aktif (kalau ada).
   spoofApplyToTab(tab).catch(() => {});
+  // ...begitu juga spoof fingerprint canvas/WebGL/font kalau lagi aktif.
+  fpSpoofApplyToTab(tab).catch(() => {});
 
   return tab;
 }
@@ -6453,4 +6456,347 @@ ipcMain.handle('spoof-set', async (event, config) => {
 
   const profile = enabled ? spoofGetProfile(countryCode, locationId) : null;
   return { ok: true, enabled, profile };
+});
+
+// ==================================
+// FINGERPRINT SPOOFER (Canvas / WebGL / Font List)
+// ==================================
+// Nyamarin 3 signal fingerprinting paling umum:
+//  - Canvas: hasil toDataURL()/toBlob()/getImageData() dikasih noise piksel
+//    kecil yang KONSISTEN per sesi (seed disimpen di disk), jadi hash canvas
+//    beda dari mesin asli tapi tetep stabil antar pemanggilan (gak keliatan
+//    "goyang" yang justru jadi sinyal deteksi baru).
+//  - WebGL: getParameter() buat UNMASKED_VENDOR/RENDERER (+ VENDOR/RENDERER
+//    biasa) dibalikin string GPU generik dari daftar profil, readPixels()
+//    dikasih noise kecil kayak canvas.
+//  - Font list: dua vektor yang paling sering dipakai script fingerprinting
+//    modern (FingerprintJS, CreepJS, BrowserLeaks) — (a) Local Font Access
+//    API (`navigator.fonts` / `queryLocalFonts()`) yang emang didesain buat
+//    baca font terinstall, kita bikin nolak kayak izin ditolak user; (b)
+//    deteksi lewat CanvasRenderingContext2D.measureText() (render teks pakai
+//    macem2 font terus ukur lebarnya) — lebar hasil measureText dikasih
+//    jitter kecil yang konsisten per sesi biar polanya gak match sama font
+//    asli yang keinstall. Teknik DOM klasik (bikin <span> hidden lalu baca
+//    offsetWidth) sengaja GAK disentuh luas-luas karena bakal ganggu layout
+//    web beneran (banyak situs baca offsetWidth buat hal normal) — dua vektor
+//    di atas udah nutup mayoritas fingerprinter yang beneran dipakai di alam
+//    liar.
+//
+// Pola sama persis kayak Geolocation & Time Spoofer di atas: state disimpen
+// di disk, script disuntik lewat CDP (Page.addScriptToEvaluateOnNewDocument)
+// SEBELUM script apapun di halaman sempet jalan, + executeJavaScript langsung
+// ke tab yang lagi kebuka biar efeknya instan.
+
+const FP_SPOOF_STATE_PATH = path.join(ROOT_DIR, 'dll/system/fp-spoof-state.json');
+
+const FP_GPU_PROFILES = [
+  { vendor: 'Google Inc. (Intel)', renderer: 'ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+  { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+  { vendor: 'Google Inc. (AMD)', renderer: 'ANGLE (AMD, AMD Radeon RX 580 Series Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+  { vendor: 'Google Inc. (Intel)', renderer: 'ANGLE (Intel, Intel(R) Iris(R) Xe Graphics Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+  { vendor: 'Google Inc. (NVIDIA)', renderer: 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)' },
+  { vendor: 'Google Inc. (Apple)', renderer: 'ANGLE (Apple, Apple M1, OpenGL 4.1)' }
+];
+
+// Font "aman" yang dibalikin ke Local Font Access API kalau dipaksa dibuka —
+// daftar font bawaan Windows/Mac yang hampir pasti ada di mana-mana, jadi
+// gak bocorin font custom/niche yang keinstall di komputer lu.
+const FP_SAFE_FONTS = [
+  'Arial', 'Arial Black', 'Calibri', 'Cambria', 'Comic Sans MS', 'Consolas',
+  'Courier New', 'Georgia', 'Impact', 'Segoe UI', 'Tahoma', 'Times New Roman',
+  'Trebuchet MS', 'Verdana'
+];
+
+let fpSpoofState = loadFpSpoofState();
+const fpSpoofScriptIds = new Map(); // tabId -> CDP script identifier
+
+function loadFpSpoofState() {
+  try {
+    const raw = fs.readFileSync(FP_SPOOF_STATE_PATH, 'utf-8');
+    const data = JSON.parse(raw);
+    return fpSpoofNormalizeState(data);
+  } catch (error) {
+    return fpSpoofNormalizeState({});
+  }
+}
+
+function fpSpoofNormalizeState(data) {
+  return {
+    enabled: !!(data && data.enabled),
+    canvas: data && data.canvas !== undefined ? !!data.canvas : true,
+    webgl: data && data.webgl !== undefined ? !!data.webgl : true,
+    fonts: data && data.fonts !== undefined ? !!data.fonts : true,
+    // Seed & pilihan profil GPU digenerate sekali terus disimpen biar
+    // fingerprint palsu ini STABIL (gak ganti-ganti tiap restart app, yang
+    // justru mencurigakan buat situs pelacak).
+    seed: (data && Number.isInteger(data.seed)) ? data.seed : (Math.random() * 0xffffffff) >>> 0,
+    gpuProfileIndex: (data && Number.isInteger(data.gpuProfileIndex))
+      ? (data.gpuProfileIndex % FP_GPU_PROFILES.length)
+      : Math.floor(Math.random() * FP_GPU_PROFILES.length)
+  };
+}
+
+function saveFpSpoofState(state) {
+  try {
+    fs.mkdirSync(path.dirname(FP_SPOOF_STATE_PATH), { recursive: true });
+    fs.writeFileSync(FP_SPOOF_STATE_PATH, JSON.stringify(state), 'utf-8');
+  } catch (error) {
+    console.error('[FPSpoof] Gagal nyimpen state:', error.message);
+  }
+}
+
+// Script yang disuntik ke MAIN WORLD tiap tab lewat CDP — sama kayak geo
+// spoofer, patch native API (canvas, WebGL, font) cuma bisa dilakuin di
+// konteks halaman itu sendiri, bukan dari isolated world preload.
+function fpSpoofBuildInjectionScript(state) {
+  const gpu = FP_GPU_PROFILES[state.gpuProfileIndex % FP_GPU_PROFILES.length];
+
+  const payload = {
+    seed: state.seed,
+    canvas: !!state.canvas,
+    webgl: !!state.webgl,
+    fonts: !!state.fonts,
+    gpuVendor: gpu.vendor,
+    gpuRenderer: gpu.renderer,
+    safeFonts: FP_SAFE_FONTS
+  };
+
+  return `(function() {
+    try {
+      var AKHTAR_FP = ${JSON.stringify(payload)};
+
+      // PRNG deterministik (mulberry32) — seed sama = urutan angka sama
+      // terus, jadi noise-nya konsisten dipanggil berkali-kali.
+      function akhtarMulberry32(seed) {
+        return function() {
+          seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+          var t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function akhtarClampByte(v) {
+        return v < 0 ? 0 : (v > 255 ? 255 : v);
+      }
+
+      // ---- CANVAS 2D FINGERPRINT ----
+      if (AKHTAR_FP.canvas && window.HTMLCanvasElement && window.CanvasRenderingContext2D) {
+        var origGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+        var origToDataURL = HTMLCanvasElement.prototype.toDataURL;
+        var origToBlob = HTMLCanvasElement.prototype.toBlob;
+
+        function akhtarNoisifyCanvas(canvas) {
+          try {
+            var ctx = canvas.getContext('2d');
+            var w = canvas.width, h = canvas.height;
+            if (!ctx || !w || !h) return;
+            var imgData = origGetImageData.call(ctx, 0, 0, w, h);
+            var rand = akhtarMulberry32(AKHTAR_FP.seed ^ (w * 374761393 + h * 668265263));
+            var d = imgData.data;
+            for (var i = 0; i < d.length; i += 4) {
+              var n = (Math.floor(rand() * 3) - 1); // -1, 0, atau +1
+              if (n === 0) continue;
+              d[i] = akhtarClampByte(d[i] + n);
+              d[i + 1] = akhtarClampByte(d[i + 1] + n);
+              d[i + 2] = akhtarClampByte(d[i + 2] + n);
+            }
+            ctx.putImageData(imgData, 0, 0);
+          } catch (e) {}
+        }
+
+        CanvasRenderingContext2D.prototype.getImageData = function(sx, sy, sw, sh) {
+          var result = origGetImageData.apply(this, arguments);
+          try {
+            var rand = akhtarMulberry32(AKHTAR_FP.seed ^ (sw * 2654435761 + sh * 2246822519));
+            var d = result.data;
+            for (var i = 0; i < d.length; i += 4) {
+              var n = (Math.floor(rand() * 3) - 1);
+              if (n === 0) continue;
+              d[i] = akhtarClampByte(d[i] + n);
+              d[i + 1] = akhtarClampByte(d[i + 1] + n);
+              d[i + 2] = akhtarClampByte(d[i + 2] + n);
+            }
+          } catch (e) {}
+          return result;
+        };
+
+        HTMLCanvasElement.prototype.toDataURL = function() {
+          akhtarNoisifyCanvas(this);
+          return origToDataURL.apply(this, arguments);
+        };
+
+        HTMLCanvasElement.prototype.toBlob = function(callback) {
+          akhtarNoisifyCanvas(this);
+          return origToBlob.apply(this, arguments);
+        };
+      }
+
+      // ---- WEBGL FINGERPRINT ----
+      if (AKHTAR_FP.webgl) {
+        var akhtarPatchWebGL = function(proto) {
+          if (!proto) return;
+
+          var origGetParameter = proto.getParameter;
+          proto.getParameter = function(param) {
+            // UNMASKED_VENDOR_WEBGL / UNMASKED_RENDERER_WEBGL (ekstensi
+            // WEBGL_debug_renderer_info) — sumber fingerprint GPU paling akurat.
+            if (param === 37445) return AKHTAR_FP.gpuVendor;
+            if (param === 37446) return AKHTAR_FP.gpuRenderer;
+            // VENDOR / RENDERER biasa
+            if (param === 0x1F00) return 'WebKit';
+            if (param === 0x1F01) return 'WebKit WebGL';
+            return origGetParameter.apply(this, arguments);
+          };
+
+          var origReadPixels = proto.readPixels;
+          if (origReadPixels) {
+            proto.readPixels = function(x, y, w, h, format, type, pixels) {
+              var result = origReadPixels.apply(this, arguments);
+              try {
+                if (pixels && pixels.length) {
+                  var rand = akhtarMulberry32(AKHTAR_FP.seed ^ (w * 2654435761 + h * 2246822519) ^ 0x777);
+                  for (var i = 0; i < pixels.length; i += 4) {
+                    var n = (Math.floor(rand() * 3) - 1);
+                    if (n === 0) continue;
+                    pixels[i] = akhtarClampByte(pixels[i] + n);
+                    pixels[i + 1] = akhtarClampByte(pixels[i + 1] + n);
+                    pixels[i + 2] = akhtarClampByte(pixels[i + 2] + n);
+                  }
+                }
+              } catch (e) {}
+              return result;
+            };
+          }
+        };
+
+        if (window.WebGLRenderingContext) akhtarPatchWebGL(WebGLRenderingContext.prototype);
+        if (window.WebGL2RenderingContext) akhtarPatchWebGL(WebGL2RenderingContext.prototype);
+      }
+
+      // ---- FONT LIST FINGERPRINT ----
+      if (AKHTAR_FP.fonts) {
+        // Vektor 1: Local Font Access API — API resmi buat baca font
+        // terinstall. Kita bikin nolak, mirip user nge-deny izinnya.
+        try {
+          if (navigator.fonts && typeof navigator.fonts.query === 'function') {
+            navigator.fonts.query = function() {
+              return Promise.reject(new DOMException('Akses ditolak.', 'NotAllowedError'));
+            };
+          }
+          if (typeof window.queryLocalFonts === 'function') {
+            window.queryLocalFonts = function() {
+              return Promise.reject(new DOMException('Akses ditolak.', 'NotAllowedError'));
+            };
+          }
+        } catch (e) {}
+
+        // Vektor 2: deteksi via CanvasRenderingContext2D.measureText() —
+        // script fingerprinting render teks pakai berbagai font lalu
+        // bandingin lebarnya buat nebak font apa aja yang keinstall. Kasih
+        // jitter kecil & konsisten (berdasarkan font-string + seed) ke
+        // lebar hasilnya biar pola itu gak match font asli lu.
+        if (window.CanvasRenderingContext2D && CanvasRenderingContext2D.prototype.measureText) {
+          var origMeasureText = CanvasRenderingContext2D.prototype.measureText;
+          CanvasRenderingContext2D.prototype.measureText = function(text) {
+            var metrics = origMeasureText.apply(this, arguments);
+            try {
+              var fontKey = (this.font || '') + '|' + text;
+              var hash = 0;
+              for (var i = 0; i < fontKey.length; i++) {
+                hash = (Math.imul(31, hash) + fontKey.charCodeAt(i)) | 0;
+              }
+              var rand = akhtarMulberry32(AKHTAR_FP.seed ^ hash);
+              var jitter = (rand() - 0.5) * 0.08; // +-0.04px, gak keliatan mata tapi rusak presisi deteksi
+              Object.defineProperty(metrics, 'width', {
+                value: metrics.width + jitter,
+                configurable: true
+              });
+            } catch (e) {}
+            return metrics;
+          };
+        }
+      }
+    } catch (e) {}
+  })();`;
+}
+
+async function fpSpoofClearTab(tab) {
+  const wc = tab.view.webContents;
+  const scriptId = fpSpoofScriptIds.get(tab.id);
+  fpSpoofScriptIds.delete(tab.id);
+  if (!scriptId) return;
+  try {
+    if (wc.debugger.isAttached()) {
+      await wc.debugger.sendCommand('Page.removeScriptToEvaluateOnNewDocument', { identifier: scriptId });
+    }
+  } catch (error) { /* tab udah navigasi/ketutup, aman diabaikan */ }
+}
+
+async function fpSpoofApplyToTab(tab) {
+  if (!tab || tab.view.webContents.isDestroyed()) return;
+  const wc = tab.view.webContents;
+
+  await fpSpoofClearTab(tab);
+
+  if (!fpSpoofState.enabled) return;
+  if (!fpSpoofState.canvas && !fpSpoofState.webgl && !fpSpoofState.fonts) return;
+
+  const script = fpSpoofBuildInjectionScript(fpSpoofState);
+
+  try {
+    if (!wc.debugger.isAttached()) {
+      wc.debugger.attach('1.3');
+    }
+    await wc.debugger.sendCommand('Page.enable');
+    const result = await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', { source: script });
+    if (result && result.identifier) {
+      fpSpoofScriptIds.set(tab.id, result.identifier);
+    }
+  } catch (error) {
+    console.error('[FPSpoof] Gagal pasang CDP script ke tab', tab.id, error.message);
+  }
+
+  // Suntik langsung ke halaman yang lagi kebuka juga biar efeknya instan.
+  try {
+    await wc.executeJavaScript(script);
+  } catch (error) { /* halaman belum siap, gapapa udah ke-cover CDP buat navigasi berikutnya */ }
+}
+
+async function fpSpoofApplyToAllTabs() {
+  for (const tab of browserTabs) {
+    await fpSpoofApplyToTab(tab);
+  }
+}
+
+// ---- IPC HANDLERS: FINGERPRINT SPOOFER ----
+
+ipcMain.handle('fpspoof-get-status', () => {
+  return {
+    enabled: fpSpoofState.enabled,
+    canvas: fpSpoofState.canvas,
+    webgl: fpSpoofState.webgl,
+    fonts: fpSpoofState.fonts
+  };
+});
+
+ipcMain.handle('fpspoof-set', async (event, config) => {
+  fpSpoofState = fpSpoofNormalizeState({
+    ...fpSpoofState,
+    enabled: !!(config && config.enabled),
+    canvas: config && config.canvas !== undefined ? !!config.canvas : fpSpoofState.canvas,
+    webgl: config && config.webgl !== undefined ? !!config.webgl : fpSpoofState.webgl,
+    fonts: config && config.fonts !== undefined ? !!config.fonts : fpSpoofState.fonts
+  });
+  saveFpSpoofState(fpSpoofState);
+
+  await fpSpoofApplyToAllTabs();
+
+  return {
+    ok: true,
+    enabled: fpSpoofState.enabled,
+    canvas: fpSpoofState.canvas,
+    webgl: fpSpoofState.webgl,
+    fonts: fpSpoofState.fonts
+  };
 });
