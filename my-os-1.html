@@ -32,9 +32,6 @@
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/brython@3.12.4/brython_stdlib.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
-    <!-- Dipakai fitur Instant Screenshot + OCR — cuma di-load sekali di sini,
-         worker-nya baru dibikin lazy pas user beneran nge-screenshot pertama
-         kali biar gak nambahin beban boot OS. -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
 
     <style>
@@ -3060,6 +3057,8 @@
             { id: 'excalidraw', name: 'Excalidraw', icon: 'fa-pencil', color: 'text-purple-300', type: 'iframe', url: 'https://excalidraw.com/', ram: 200, winWidth: '1100px', winHeight: '700px' },
             { id: 'photopea', name: 'Photopea', icon: 'fa-image', color: 'text-blue-300', type: 'iframe', url: 'https://www.photopea.com/', ram: 400, winWidth: '1100px', winHeight: '700px' },
             { id: 'threejs', name: '3D Editor', icon: 'fa-cube', color: 'text-blue-400', type: 'iframe', url: 'https://threejs.org/editor/', ram: 300, winWidth: '1100px', winHeight: '700px' },
+            { id: 'akhtaros-ai', name: 'Akhtar OS AI', icon: 'fa-sparkles', color: 'text-indigo-400', type: 'iframe', url: 'akhtarosai.html', desktop: true, ram: 150, winWidth: '1000px', winHeight: '680px' },
+            { id: 'snake-king-io', name: 'Snake King IO', icon: 'fa-worm', color: 'text-green-400', type: 'iframe', url: 'snake.html', desktop: true, ram: 200, winWidth: '900px', winHeight: '680px' },
             { id: 'pluginstore', name: 'Plugin Store', icon: 'fa-puzzle-piece', color: 'text-indigo-400', type: 'native', desktop: true, ram: 80, winWidth: '950px', winHeight: '650px', html: '<div id="pluginstore-root"></div>' },
             { id: 'storagescan', name: 'Storage Scanner', icon: 'fa-magnifying-glass-chart', color: 'text-cyan-400', type: 'native', desktop: true, ram: 40, winWidth: '780px', winHeight: '580px', html: '<div id="storagescan-root" style="height:100%;background:#050d1a;font-family:Segoe UI,monospace;overflow:hidden;"></div>' },
 
@@ -4299,6 +4298,34 @@
                                     <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-location-dot"></i> GPS palsu</span>
                                     <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-clock"></i> Timezone ikut lokasi</span>
                                     <span style="font-size:10px;background:rgba(56,189,248,0.15);color:#7dd3fc;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-language"></i> Bahasa ikut lokasi</span>
+                                </div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,#1e0c34,#3a0e5f);padding:14px;border-radius:8px;border:1px solid #a855f7;margin-bottom:14px;">
+                                <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+                                    <i class="fa-solid fa-fingerprint" style="font-size:28px;color:#c084fc;"></i>
+                                    <div style="flex:1;">
+                                        <div style="font-weight:bold;font-size:13px;color:#fff;">Fingerprint Spoofer</div>
+                                        <div style="font-size:11px;color:#d8b4fe;">Nyamarin sidik jari browser (canvas, WebGL, daftar font) biar situs susah ngelacak lu lewat teknik non-cookie.</div>
+                                    </div>
+                                    <div class="toggle-switch" id="fpspoof-toggle" onclick="fpSpoofToggleMaster()"></div>
+                                </div>
+                                <div id="fpspoof-sub-options" style="display:none;flex-direction:column;gap:8px;background:rgba(0,0,0,0.25);border-radius:6px;padding:10px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="font-size:12px;color:#e9d5ff;"><i class="fa-solid fa-image" style="width:16px;"></i> Spoof Canvas Fingerprint</span>
+                                        <div class="toggle-switch" id="fpspoof-canvas-toggle" onclick="fpSpoofToggleSub('canvas')"></div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="font-size:12px;color:#e9d5ff;"><i class="fa-solid fa-cube" style="width:16px;"></i> Spoof WebGL Fingerprint</span>
+                                        <div class="toggle-switch" id="fpspoof-webgl-toggle" onclick="fpSpoofToggleSub('webgl')"></div>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="font-size:12px;color:#e9d5ff;"><i class="fa-solid fa-font" style="width:16px;"></i> Spoof Font List</span>
+                                        <div class="toggle-switch" id="fpspoof-fonts-toggle" onclick="fpSpoofToggleSub('fonts')"></div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
+                                    <span style="font-size:10px;background:rgba(192,132,252,0.15);color:#d8b4fe;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-shield-halved"></i> Noise per-sesi</span>
+                                    <span style="font-size:10px;background:rgba(192,132,252,0.15);color:#d8b4fe;padding:3px 8px;border-radius:10px;"><i class="fa-solid fa-microchip"></i> GPU generik</span>
                                 </div>
                             </div>
                             <div style="background:#f3f3f3;padding:14px;border-radius:8px;border:1px solid #e5e5e5;margin-bottom:14px;display:flex;align-items:center;gap:14px;">
@@ -12312,6 +12339,7 @@ void loop() {
             }
             if (tabName === 'privacy') {
                 setTimeout(function(){ if (typeof spoofInit === 'function') spoofInit(); }, 30);
+                setTimeout(function(){ if (typeof fpSpoofInit === 'function') fpSpoofInit(); }, 30);
             }
         }
 
@@ -33354,6 +33382,89 @@ html.akhtar-lag *{transition-duration:.9s !important;animation-duration:2.4s !im
         }
 
         window.spoofInit = spoofInit;
+    })();
+    </script>
+
+    <script>
+    // ==================================
+    // FINGERPRINT SPOOFER — UI GLUE
+    // ==================================
+    (function() {
+        function fpSpoofHasBridge() {
+            return !!(window.akhtarFPSpoof && window.akhtarFPSpoof.getStatus);
+        }
+
+        function fpSpoofRenderStatus(status) {
+            const master = document.getElementById('fpspoof-toggle');
+            const subBox = document.getElementById('fpspoof-sub-options');
+            const canvasT = document.getElementById('fpspoof-canvas-toggle');
+            const webglT = document.getElementById('fpspoof-webgl-toggle');
+            const fontsT = document.getElementById('fpspoof-fonts-toggle');
+
+            if (master) master.classList.toggle('on', !!status.enabled);
+            if (subBox) subBox.style.display = status.enabled ? 'flex' : 'none';
+            if (canvasT) canvasT.classList.toggle('on', status.canvas !== false);
+            if (webglT) webglT.classList.toggle('on', status.webgl !== false);
+            if (fontsT) fontsT.classList.toggle('on', status.fonts !== false);
+        }
+
+        async function fpSpoofCurrentConfigFromUI() {
+            return {
+                enabled: document.getElementById('fpspoof-toggle')?.classList.contains('on') || false,
+                canvas: document.getElementById('fpspoof-canvas-toggle')?.classList.contains('on') || false,
+                webgl: document.getElementById('fpspoof-webgl-toggle')?.classList.contains('on') || false,
+                fonts: document.getElementById('fpspoof-fonts-toggle')?.classList.contains('on') || false
+            };
+        }
+
+        window.fpSpoofToggleMaster = async function() {
+            if (!fpSpoofHasBridge()) return;
+            const master = document.getElementById('fpspoof-toggle');
+            if (!master) return;
+            master.classList.toggle('on');
+
+            const cfg = await fpSpoofCurrentConfigFromUI();
+            // Pas pertama kali dinyalain & belum ada submodul yang aktif,
+            // nyalain ketiganya sekalian biar user gak bengong liat semua off.
+            if (cfg.enabled && !cfg.canvas && !cfg.webgl && !cfg.fonts) {
+                cfg.canvas = true;
+                cfg.webgl = true;
+                cfg.fonts = true;
+            }
+            try {
+                const result = await window.akhtarFPSpoof.setConfig(cfg);
+                if (result) fpSpoofRenderStatus(result);
+            } catch (e) {
+                console.error('[FPSpoof] Gagal apply config:', e);
+            }
+        };
+
+        window.fpSpoofToggleSub = async function(key) {
+            if (!fpSpoofHasBridge()) return;
+            const el = document.getElementById('fpspoof-' + key + '-toggle');
+            if (!el) return;
+            el.classList.toggle('on');
+
+            const cfg = await fpSpoofCurrentConfigFromUI();
+            try {
+                const result = await window.akhtarFPSpoof.setConfig(cfg);
+                if (result) fpSpoofRenderStatus(result);
+            } catch (e) {
+                console.error('[FPSpoof] Gagal apply config:', e);
+            }
+        };
+
+        async function fpSpoofInit() {
+            if (!fpSpoofHasBridge()) return;
+            try {
+                const status = await window.akhtarFPSpoof.getStatus();
+                fpSpoofRenderStatus(status);
+            } catch (e) {
+                console.error('[FPSpoof] Gagal load status:', e);
+            }
+        }
+
+        window.fpSpoofInit = fpSpoofInit;
     })();
     </script>
 
